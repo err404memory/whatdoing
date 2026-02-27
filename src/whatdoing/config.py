@@ -28,6 +28,21 @@ class Config:
     priority_presets: list[str] = field(default_factory=lambda: [
         "High", "Medium", "Low",
     ])
+    dashboard_columns: list[str] = field(default_factory=lambda: [
+        "status", "priority", "project", "type", "next_action",
+    ])
+    buttons: dict = field(default_factory=lambda: {
+        "placement": "top",
+        "items": [
+            {"label": "Scratch", "action": "screen:scratchpad"},
+            {"label": "Journal", "action": "screen:journal"},
+            {"label": "Guide", "action": "screen:guide"},
+            {"label": "+ New", "action": "new_project"},
+        ],
+    })
+    theme: dict = field(default_factory=lambda: {
+        "name": "default",
+    })
 
     @property
     def projects_path(self) -> Path:
@@ -107,11 +122,44 @@ def load_config() -> Config:
             cfg.status_presets = data["status-presets"]
         if "priority-presets" in data and isinstance(data["priority-presets"], list):
             cfg.priority_presets = data["priority-presets"]
+        if "dashboard-columns" in data and isinstance(data["dashboard-columns"], list):
+            cfg.dashboard_columns = data["dashboard-columns"]
+        if "buttons" in data and isinstance(data["buttons"], dict):
+            cfg.buttons = data["buttons"]
+        if "theme" in data and isinstance(data["theme"], dict):
+            cfg.theme = data["theme"]
 
     if not cfg.base_path:
         cfg.base_path = detect_base_path()
 
     return cfg
+
+
+def save_config(cfg: Config) -> None:
+    """Save config back to ~/.whatdoing/config.yaml."""
+    config_file = whatdoing_home() / "config.yaml"
+    data = {}
+
+    if config_file.exists():
+        try:
+            with open(config_file) as f:
+                data = yaml.safe_load(f) or {}
+        except Exception:
+            data = {}
+
+    data["base_path"] = cfg.base_path
+    data["overview_dir"] = cfg.overview_dir
+    data["editor"] = cfg.editor
+    data["docker_host"] = cfg.docker_host
+    data["status-presets"] = cfg.status_presets
+    data["priority-presets"] = cfg.priority_presets
+    data["dashboard-columns"] = cfg.dashboard_columns
+    data["buttons"] = cfg.buttons
+    data["theme"] = cfg.theme
+
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(config_file, "w") as f:
+        yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
 
 def load_state() -> dict:
