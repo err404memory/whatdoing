@@ -141,7 +141,7 @@ class DashboardScreen(Screen):
                     continue
                 widget_id = f"btn-{_sanitize_id(item['action'])}"
                 self._button_actions[widget_id] = item["action"]
-                yield Button(item["label"], id=widget_id, classes="bar-button")
+                yield Button(item["label"], id=widget_id, variant="primary", classes="bar-button")
         yield Input(placeholder="Type to filter projects...", id="filter-input")
         yield DataTable(id="project-table")
         with Horizontal(id="context-bar"):

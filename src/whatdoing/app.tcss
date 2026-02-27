@@ -20,15 +20,15 @@ Screen {
 
 #button-bar {
     dock: top;
-    height: 3;
+    height: auto;
+    max-height: 5;
     padding: 0 1;
-    background: $surface;
+    background: $surface-darken-1;
 }
 
 .bar-button {
     margin: 0 1 0 0;
     min-width: 10;
-    height: 3;
 }
 
 #context-bar {
