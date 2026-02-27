@@ -17,5 +17,8 @@ dependencies = [
 [project.scripts]
 whatdoing = "whatdoing.app:main"
 
+[project.optional-dependencies]
+images = ["textual-image>=0.7.0"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/whatdoing"]

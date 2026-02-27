@@ -291,3 +291,11 @@ Screen {
 #guide-content {
     height: auto;
 }
+
+/* ── Background Image (optional) ── */
+
+#bg-image {
+    width: 100%;
+    height: 100%;
+    opacity: 0.3;
+}

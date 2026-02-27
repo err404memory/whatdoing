@@ -45,6 +45,20 @@ class WhatDoingApp(App):
             variables["accent"] = colors.get("accent", variables.get("accent", ""))
         return variables
 
+    def compose(self) -> ComposeResult:
+        """Compose the main app. Optionally adds background image."""
+        bg_image = self.config.theme.get("background-image", "")
+        if bg_image:
+            from pathlib import Path
+
+            if Path(bg_image).exists():
+                try:
+                    from textual_image.widget import Image
+
+                    yield Image(bg_image, id="bg-image")
+                except ImportError:
+                    pass  # textual-image not installed, skip gracefully
+
     def __init__(self, config: Config | None = None, target: str = "") -> None:
         super().__init__()
         self.config = config or load_config()
