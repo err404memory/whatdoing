@@ -9,9 +9,23 @@ from textual.screen import Screen, ModalScreen
 from textual.widgets import Button, Checkbox, DataTable, Footer, Input, Label, Static
 from rich.text import Text
 
+import re
+
 from whatdoing.config import load_config, load_state, save_state, save_config
 from whatdoing.models import Project, scan_projects
 from whatdoing.screens.project import ProjectScreen
+
+
+def _sanitize_id(raw: str) -> str:
+    """Sanitize a string into a valid Textual widget ID.
+
+    Textual IDs: letters, numbers, underscores, hyphens only. No leading digit.
+    """
+    s = re.sub(r'[^a-zA-Z0-9_-]', '-', raw)
+    s = re.sub(r'-+', '-', s).strip('-')
+    if s and s[0].isdigit():
+        s = f"x{s}"
+    return s or "unknown"
 
 
 CORE_COLUMNS = {"status", "priority", "project"}
@@ -75,7 +89,7 @@ class ColumnPickerScreen(ModalScreen):
                         label,
                         value=is_active or is_core,
                         disabled=is_core,
-                        id=f"col-{col_key.replace(' ', '_').replace('#', 'h')}",
+                        id=f"col-{_sanitize_id(col_key)}",
                         name=col_key,
                     )
 
@@ -117,15 +131,17 @@ class DashboardScreen(Screen):
         self.filtered_projects: list[Project] = []
         self.config = load_config()
         self._last_project = load_state().get("last_project", "")
+        self._button_actions: dict[str, str] = {}  # widget_id -> action string
 
     def compose(self) -> ComposeResult:
         yield Static("", id="dashboard-header")
         with Horizontal(id="button-bar"):
             for item in self.config.buttons.get("items", []):
                 if item.get("context"):
-                    continue  # Context buttons added dynamically
-                safe_id = item["action"].replace(":", "--")
-                yield Button(item["label"], id=f"btn-{safe_id}", classes="bar-button")
+                    continue
+                widget_id = f"btn-{_sanitize_id(item['action'])}"
+                self._button_actions[widget_id] = item["action"]
+                yield Button(item["label"], id=widget_id, classes="bar-button")
         yield Input(placeholder="Type to filter projects...", id="filter-input")
         yield DataTable(id="project-table")
         with Horizontal(id="context-bar"):
@@ -338,7 +354,7 @@ class DashboardScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id or ""
-        action = btn_id.replace("btn-", "", 1).replace("--", ":")
+        action = self._button_actions.get(btn_id, "")
 
         if action.startswith("screen:"):
             screen_name = action.split(":", 1)[1]
@@ -375,8 +391,9 @@ class DashboardScreen(Screen):
                     key = action.split(":", 1)[1] if ":" in action else ""
                     val = project.doc.get(key, "")
                     if val:
-                        safe_id = action.replace(":", "--")
-                        btn = Button(item["label"], id=f"btn-{safe_id}", classes="ctx-button")
+                        widget_id = f"btn-{_sanitize_id(action)}"
+                        self._button_actions[widget_id] = action
+                        btn = Button(item["label"], id=widget_id, classes="ctx-button")
                         context_bar.mount(btn)
 
     def on_input_changed(self, event: Input.Changed) -> None:
