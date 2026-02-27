@@ -37,6 +37,15 @@ class WhatDoingApp(App):
 
     def on_mount(self) -> None:
         # Install named screens for navigation
+        """Set up and display the appropriate screen based on the target.
+        
+        This function installs named screens for navigation, including
+        ScratchpadScreen, JournalScreen, and GuideScreen. It then checks  the value of
+        self._target to determine which screen to push. If  the target is a specific
+        project, it resolves the project using  the resolve_project function and
+        displays the corresponding  ProjectScreen. If the project is not found, an
+        error notification  is displayed, and the DashboardScreen is shown instead.
+        """
         self.install_screen(ScratchpadScreen(), name="scratchpad")
         self.install_screen(JournalScreen(), name="journal")
         self.install_screen(GuideScreen(), name="guide")
@@ -59,7 +68,7 @@ class WhatDoingApp(App):
             self.push_screen(DashboardScreen())
 
     def action_quick_capture(self) -> None:
-        """Quick note capture from any screen."""
+        """Quickly captures a note from the screen."""
         self.push_screen("scratchpad")
 
 

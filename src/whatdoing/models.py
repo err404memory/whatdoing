@@ -55,22 +55,31 @@ class Project:
 
     @property
     def sort_key(self) -> tuple[int, int, str]:
-        """Sort by status rank, then priority rank, then name."""
+        """Return a tuple of status rank, priority rank, and name."""
         s = STATUS_RANK.get(self.status.lower(), 5)
         p = PRIORITY_RANK.get(self.priority.lower(), 4)
         return (s, p, self.name.lower())
 
     @property
     def status_color(self) -> str:
+        """Get the color associated with the current status."""
         return STATUS_COLORS.get(self.status.lower(), "white")
 
     @property
     def priority_color(self) -> str:
+        """Return the priority color based on the priority level."""
         return PRIORITY_COLORS.get(self.priority.lower(), "white")
 
     @classmethod
     def from_directory(cls, dir_path: Path) -> Project:
-        """Load a project from a directory containing _OVERVIEW.md."""
+        """Load a project from a directory containing _OVERVIEW.md.
+        
+        This class method initializes a Project instance by loading data from  a
+        specified directory. It checks for the existence of the _OVERVIEW.md  file and
+        parses its content if available. The method extracts various  project
+        attributes such as name, status, priority, and tags, and  returns a Project
+        instance with the gathered information.
+        """
         overview = dir_path / "_OVERVIEW.md"
         name = dir_path.name
 
@@ -104,9 +113,14 @@ class Project:
 
 
 def scan_projects(projects_path: Path) -> list[Project]:
-    """Scan for all project directories and return sorted list.
-
-    Shows ALL directories, even those without _OVERVIEW.md (marked has_overview=False).
+    """Scan for all project directories and return a sorted list.
+    
+    This function iterates through the specified `projects_path`, checking each
+    item to determine if it is a directory  and does not start with a dot or
+    underscore. It collects valid project directories into a list, creating
+    `Project` instances from each directory. The resulting list is then sorted,
+    prioritizing projects with an  overview file before sorting by their defined
+    sort key.
     """
     if not projects_path.exists():
         return []

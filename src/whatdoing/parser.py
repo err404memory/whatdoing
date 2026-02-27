@@ -22,7 +22,15 @@ class ParsedDocument:
     title: str = ""
 
     def get(self, key: str, default: str = "") -> str:
-        """Get a frontmatter value, always as a string."""
+        """def get(self, key: str, default: str = "") -> str:
+        
+        Retrieve a frontmatter value as a string.  This function attempts to fetch the
+        value associated with the given  key from the frontmatter. If the value is None
+        or the string "null",  it returns the specified default value. If the value is
+        a list, it  returns the first element as a string, or the default if the list
+        is  empty. Otherwise, it returns the trimmed string representation of the
+        value or the default if the value is empty.
+        """
         val = self.frontmatter.get(key, "")
         if val is None or val == "null":
             return default
@@ -32,11 +40,21 @@ class ParsedDocument:
         return str(val).strip() or default
 
     def get_section(self, heading: str) -> str:
-        """Get content under a ## heading."""
+        """Retrieve content under a specified heading."""
         return self.sections.get(heading, "")
 
     def body_without(self, *headings: str) -> str:
-        """Return body with specified ## sections removed."""
+        """Return body with specified ## sections removed.
+        
+        This function processes the body of text by splitting it into lines and
+        removing any lines that correspond to the specified headings. It checks  each
+        line to determine if it starts with "## " and matches any of the  provided
+        headings. Lines that do not match the headings are retained  and returned as a
+        single string.
+        
+        Args:
+            headings (str): The headings to be removed from the body.
+        """
         lines = self.body.split("\n")
         result = []
         skip = False
@@ -53,12 +71,19 @@ class ParsedDocument:
 
 def parse_document(path: Path) -> ParsedDocument:
     """Parse a markdown file with optional YAML frontmatter.
-
-    Handles:
-    - Files with no frontmatter (just markdown)
-    - Malformed YAML (returns empty dict, preserves body)
-    - YAML values that are lists, null, or missing
-    - Horizontal rules (---) in the body
+    
+    This function reads a markdown file specified by the given path and processes
+    it to extract both the frontmatter and the body content. It handles various
+    scenarios, including files without frontmatter, malformed YAML, and horizontal
+    rules. The function also ensures that any errors during file reading or YAML
+    parsing do not disrupt the flow, returning a ParsedDocument object with the
+    appropriate content.
+    
+    Args:
+        path (Path): The path to the markdown file to be parsed.
+    
+    Returns:
+        ParsedDocument: An object containing the parsed frontmatter and body of the document.
     """
     doc = ParsedDocument()
 
@@ -109,7 +134,17 @@ def parse_document(path: Path) -> ParsedDocument:
 
 
 def _extract_metadata(doc: ParsedDocument) -> None:
-    """Extract title and sections from the body."""
+    """Extract title and sections from the body.
+    
+    This function processes the body of a ParsedDocument to extract the  title and
+    sections. It identifies the title as the first level one  heading (starting
+    with "# ") and captures all subsequent level two  headings (starting with "##
+    ") as sections, storing them in the  `doc` object. The content under each
+    section is collected until  the next section heading is encountered.
+    
+    Args:
+        doc (ParsedDocument): The document from which to extract metadata.
+    """
     lines = doc.body.split("\n")
 
     # Find title (first # heading)
@@ -136,11 +171,7 @@ def _extract_metadata(doc: ParsedDocument) -> None:
 
 
 def merge_documents(primary: ParsedDocument, secondary: ParsedDocument) -> str:
-    """Merge unique sections from secondary into primary body.
-
-    Returns the merged body text. Sections in secondary that don't exist
-    in primary are appended at the end.
-    """
+    """Merge unique sections from secondary into primary body."""
     merged = primary.body
     primary_headings = set(primary.sections.keys())
 

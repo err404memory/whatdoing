@@ -31,10 +31,19 @@ class Config:
 
     @property
     def projects_path(self) -> Path:
+        """Returns the path to the projects directory."""
         return Path(self.base_path) / self.overview_dir
 
     @property
     def resolved_editor(self) -> str:
+        """Retrieve the resolved editor for the current environment.
+        
+        This property checks the value of the editor attribute. If the editor is not
+        set  or starts with a dollar sign, it is ignored. The function then attempts to
+        return  "micro" if it is available on the system. If "micro" is not found, it
+        falls back  to the value of the EDITOR environment variable, defaulting to
+        "nano" if neither  is set.
+        """
         editor = self.editor
         # Ignore bash-style expressions from v1 config (e.g., "${EDITOR:-nano}")
         if not editor or editor.startswith("$"):
@@ -57,25 +66,24 @@ def whatdoing_home() -> Path:
 
 
 def state_path() -> Path:
+    """Return the path to the state.json file."""
     return whatdoing_home() / "state.json"
 
 
 def journal_dir() -> Path:
+    """Create and return the path to the journal directory."""
     d = whatdoing_home() / "journal"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def scratchpad_path() -> Path:
+    """Return the path to the scratchpad file."""
     return whatdoing_home() / "scratchpad.md"
 
 
 def detect_base_path() -> str:
-    """Auto-detect the project base path for the current machine.
-
-    Checks known paths for satellite (rclone mount) and jeffrey (direct).
-    Returns empty string if nothing found (triggers first-run setup).
-    """
+    """Auto-detect the project base path for the current machine."""
     candidates = [
         Path("/home/ash/server"),       # satellite (laptop, rclone mount)
         Path("/home/ashes"),            # jeffrey (server, direct)
