@@ -124,7 +124,8 @@ class DashboardScreen(Screen):
             for item in self.config.buttons.get("items", []):
                 if item.get("context"):
                     continue  # Context buttons added dynamically
-                yield Button(item["label"], id=f"btn-{item['action']}", classes="bar-button")
+                safe_id = item["action"].replace(":", "--")
+                yield Button(item["label"], id=f"btn-{safe_id}", classes="bar-button")
         yield Input(placeholder="Type to filter projects...", id="filter-input")
         yield DataTable(id="project-table")
         with Horizontal(id="context-bar"):
@@ -337,7 +338,7 @@ class DashboardScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id or ""
-        action = btn_id.replace("btn-", "", 1)
+        action = btn_id.replace("btn-", "", 1).replace("--", ":")
 
         if action.startswith("screen:"):
             screen_name = action.split(":", 1)[1]
@@ -374,7 +375,8 @@ class DashboardScreen(Screen):
                     key = action.split(":", 1)[1] if ":" in action else ""
                     val = project.doc.get(key, "")
                     if val:
-                        btn = Button(item["label"], id=f"btn-{action}", classes="ctx-button")
+                        safe_id = action.replace(":", "--")
+                        btn = Button(item["label"], id=f"btn-{safe_id}", classes="ctx-button")
                         context_bar.mount(btn)
 
     def on_input_changed(self, event: Input.Changed) -> None:
