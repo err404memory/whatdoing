@@ -49,22 +49,40 @@ PRIORITY_OPTIONS = [
     ("Low", "Low"),
 ]
 
+ADD_NEW_SENTINEL = "__add_new__"
 
-def _normalize_status(value: str) -> str:
+
+def _build_status_options(config) -> list[tuple[str, str]]:
+    """Build status Select options from config presets, with '+ Add new...' at the end."""
+    opts = [(s, s) for s in config.status_presets]
+    opts.append(("+ Add new...", ADD_NEW_SENTINEL))
+    return opts
+
+
+def _build_priority_options(config) -> list[tuple[str, str]]:
+    """Build priority Select options from config presets, with '+ Add new...' at the end."""
+    opts = [(p, p) for p in config.priority_presets]
+    opts.append(("+ Add new...", ADD_NEW_SENTINEL))
+    return opts
+
+
+def _normalize_status(value: str, config=None) -> str:
     """Normalize status to match SELECT options (case-insensitive lookup)."""
     if not value:
         return ""
-    for _, option_value in STATUS_OPTIONS:
+    presets = config.status_presets if config else [s for _, s in STATUS_OPTIONS]
+    for option_value in presets:
         if value.lower() == option_value.lower():
             return option_value
     return value  # Fallback to original if no match
 
 
-def _normalize_priority(value: str) -> str:
+def _normalize_priority(value: str, config=None) -> str:
     """Normalize priority to match SELECT options (case-insensitive lookup)."""
     if not value:
         return ""
-    for _, option_value in PRIORITY_OPTIONS:
+    presets = config.priority_presets if config else [p for _, p in PRIORITY_OPTIONS]
+    for option_value in presets:
         if value.lower() == option_value.lower():
             return option_value
     return value  # Fallback to original if no match
@@ -257,6 +275,7 @@ class ProjectScreen(Screen):
         super().__init__()
         self.project = project
         self._editing: str = ""  # Which field is being edited ("status", "priority", etc.)
+        self._adding_new: str = ""  # Which field is getting a new custom option
 
     def compose(self) -> ComposeResult:
         yield Static("", id="project-header")
@@ -271,6 +290,9 @@ class ProjectScreen(Screen):
         # Inline editors (hidden, only shown when _editing is set)
         yield Select(STATUS_OPTIONS, id="select-status", allow_blank=False)
         yield Select(PRIORITY_OPTIONS, id="select-priority", allow_blank=False)
+
+        # Custom new option input (hidden, shown when "+ Add new..." is selected)
+        yield Input(placeholder="Type new value...", id="input-new-option")
 
         # Clickable next action
         yield ClickableField("", field_id="next_action", id="field-next")
@@ -300,9 +322,15 @@ class ProjectScreen(Screen):
         # This prevents Select.Changed from firing with default values
         self.query_one("#select-status", Select).display = False
         self.query_one("#select-priority", Select).display = False
+        self.query_one("#input-new-option", Input).display = False
         self.query_one("#input-next", Input).display = False
         self.query_one("#input-add-section", Input).display = False
         self.query_one("#input-worklog", Input).display = False
+
+        # Build Select options from config presets
+        config = self.app.config
+        self.query_one("#select-status", Select).set_options(_build_status_options(config))
+        self.query_one("#select-priority", Select).set_options(_build_priority_options(config))
 
         if self.project and self.project.has_overview:
             self._render_project()
@@ -498,14 +526,14 @@ class ProjectScreen(Screen):
             sel = self.query_one("#select-status", Select)
             # Set value BEFORE showing to prevent spurious Changed events
             if self.project and self.project.status:
-                sel.value = _normalize_status(self.project.status)
+                sel.value = _normalize_status(self.project.status, self.app.config)
             sel.display = True
             sel.focus()
 
         elif field == "priority":
             sel = self.query_one("#select-priority", Select)
             if self.project and self.project.priority:
-                sel.value = _normalize_priority(self.project.priority)
+                sel.value = _normalize_priority(self.project.priority, self.app.config)
             sel.display = True
             sel.focus()
 
@@ -530,8 +558,10 @@ class ProjectScreen(Screen):
     def _hide_editors(self) -> None:
         """Hide all inline editors."""
         self._editing = ""
+        self._adding_new = ""
         self.query_one("#select-status", Select).display = False
         self.query_one("#select-priority", Select).display = False
+        self.query_one("#input-new-option", Input).display = False
         self.query_one("#input-next", Input).display = False
         self.query_one("#input-add-section", Input).display = False
         self.query_one("#input-worklog", Input).display = False
@@ -633,6 +663,26 @@ class ProjectScreen(Screen):
 
         value = str(event.value)
 
+        if value == ADD_NEW_SENTINEL:
+            if event.select.id == "select-status" and self._editing == "status":
+                self._adding_new = "status"
+                event.select.display = False
+                inp = self.query_one("#input-new-option", Input)
+                inp.placeholder = "New status name..."
+                inp.value = ""
+                inp.display = True
+                inp.focus()
+                return
+            elif event.select.id == "select-priority" and self._editing == "priority":
+                self._adding_new = "priority"
+                event.select.display = False
+                inp = self.query_one("#input-new-option", Input)
+                inp.placeholder = "New priority name..."
+                inp.value = ""
+                inp.display = True
+                inp.focus()
+                return
+
         if event.select.id == "select-status" and self._editing == "status":
             if self.project:
                 self._write_yaml("Status", value)
@@ -671,6 +721,33 @@ class ProjectScreen(Screen):
                 self._render_sections()
                 self.notify(f"Added: ## {value}")
             self._hide_editors()
+
+        elif event.input.id == "input-new-option" and self._adding_new:
+            if value:
+                from whatdoing.config import save_config
+                config = self.app.config
+                if self._adding_new == "status":
+                    if value not in config.status_presets:
+                        config.status_presets.append(value)
+                        save_config(config)
+                    self._write_yaml("Status", value)
+                    self.project.status = value
+                    self.query_one("#select-status", Select).set_options(_build_status_options(config))
+                    self.notify(f"Status \u2192 {value} (added to presets)")
+                elif self._adding_new == "priority":
+                    if value not in config.priority_presets:
+                        config.priority_presets.append(value)
+                        save_config(config)
+                    self._write_yaml("Priority", value)
+                    self.project.priority = value
+                    self.query_one("#select-priority", Select).set_options(_build_priority_options(config))
+                    self.notify(f"Priority \u2192 {value} (added to presets)")
+                self._adding_new = ""
+                self._hide_editors()
+                self._render_metadata()
+            else:
+                self._adding_new = ""
+                self._hide_editors()
 
         elif event.input.id == "input-worklog" and self._editing == "log_work":
             if self.project and value:
