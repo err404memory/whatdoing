@@ -6,6 +6,7 @@ Designed to parse _OVERVIEW.md and PROJECT.md files.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -200,3 +201,40 @@ def merge_documents(primary: ParsedDocument, secondary: ParsedDocument) -> str:
             merged += f"\n\n## {heading}\n{content}"
 
     return merged
+
+
+# ── Checkbox helpers ───────────────────────────────────────────
+
+CHECKBOX_RE = re.compile(r'^(\s*)- \[([ xX])\] (.+)$')
+
+
+def parse_checkboxes(content: str) -> list[dict]:
+    """Parse markdown checkbox lines from content.
+
+    Returns list of dicts: {line_idx, indent, checked, text, raw_line}
+    """
+    results = []
+    for i, line in enumerate(content.split("\n")):
+        m = CHECKBOX_RE.match(line)
+        if m:
+            results.append({
+                "line_idx": i,
+                "indent": len(m.group(1)),
+                "checked": m.group(2) in ("x", "X"),
+                "text": m.group(3),
+                "raw_line": line,
+            })
+    return results
+
+
+def toggle_checkbox(content: str, line_idx: int) -> str:
+    """Toggle a checkbox on a specific line in content."""
+    lines = content.split("\n")
+    if line_idx < 0 or line_idx >= len(lines):
+        return content
+    line = lines[line_idx]
+    if "- [ ]" in line:
+        lines[line_idx] = line.replace("- [ ]", "- [x]", 1)
+    elif "- [x]" in line or "- [X]" in line:
+        lines[line_idx] = re.sub(r'- \[[xX]\]', '- [ ]', line, count=1)
+    return "\n".join(lines)

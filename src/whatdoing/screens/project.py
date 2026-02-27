@@ -22,7 +22,7 @@ from textual.containers import Vertical, VerticalScroll, Horizontal
 from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import (
-    Footer, Label, Markdown, Static, Input, Select, Button, TextArea,
+    Checkbox, Footer, Label, Markdown, Static, Input, Select, Button, TextArea,
 )
 from rich.text import Text
 
@@ -183,11 +183,12 @@ class EditableSection(Vertical):
 
     def compose(self) -> ComposeResult:
         yield Static(self._heading_markup(), classes="section-heading")
-        yield Markdown(self.section_content, classes="section-display")
+        yield Vertical(classes="section-display")
         yield SectionTextArea("", classes="section-editor")
 
     def on_mount(self) -> None:
         self.query_one(".section-editor", SectionTextArea).display = False
+        self._render_display()
         self._apply_blocker_style()
 
     def _heading_markup(self) -> str:
@@ -203,12 +204,60 @@ class EditableSection(Vertical):
             else:
                 self.remove_class("has-blockers")
 
+    def _render_display(self) -> None:
+        """Render section content with interactive checkboxes."""
+        from whatdoing.parser import parse_checkboxes
+
+        display = self.query_one(".section-display", Vertical)
+        display.remove_children()
+
+        checks = parse_checkboxes(self.section_content)
+        if not checks:
+            display.mount(Markdown(self.section_content))
+            return
+
+        lines = self.section_content.split("\n")
+        check_indices = {c["line_idx"] for c in checks}
+        buffer = []
+
+        for i, line in enumerate(lines):
+            if i in check_indices:
+                if buffer:
+                    display.mount(Markdown("\n".join(buffer)))
+                    buffer = []
+                check = next(c for c in checks if c["line_idx"] == i)
+                cb = Checkbox(
+                    check["text"],
+                    value=check["checked"],
+                    id=f"check-{id(self)}-{i}",
+                )
+                display.mount(cb)
+            else:
+                buffer.append(line)
+
+        if buffer:
+            display.mount(Markdown("\n".join(buffer)))
+
+    def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        """Toggle checkbox in content and write to disk."""
+        from whatdoing.parser import toggle_checkbox
+
+        cb_id = event.checkbox.id or ""
+        prefix = f"check-{id(self)}-"
+        if not cb_id.startswith(prefix):
+            return
+
+        line_idx = int(cb_id[len(prefix):])
+        self.section_content = toggle_checkbox(self.section_content, line_idx)
+        self.post_message(self.Saved(self.heading, self.section_content))
+        event.stop()
+
     def _enter_edit(self) -> None:
         if self._in_edit:
             return
         self._in_edit = True
         self.add_class("editing")
-        display = self.query_one(".section-display", Markdown)
+        display = self.query_one(".section-display")
         editor = self.query_one(".section-editor", SectionTextArea)
         display.display = False
         editor.text = self.section_content
@@ -220,12 +269,12 @@ class EditableSection(Vertical):
             return
         self._in_edit = False
         self.remove_class("editing")
-        display = self.query_one(".section-display", Markdown)
+        display = self.query_one(".section-display")
         editor = self.query_one(".section-editor", SectionTextArea)
 
         if save:
             self.section_content = editor.text
-            display.update(self.section_content)
+            self._render_display()
             self._apply_blocker_style()
             self.post_message(self.Saved(self.heading, self.section_content))
 
