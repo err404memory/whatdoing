@@ -26,6 +26,7 @@ class DashboardScreen(Screen):
         Binding("l", "open_journal", "Journal", show=True),
         Binding("question_mark", "open_guide", "Help", show=True),
         Binding("q", "quit_app", "Quit", show=True),
+        Binding("t", "cycle_theme", "Theme", show=True),
     ]
 
     def __init__(self) -> None:
@@ -171,6 +172,22 @@ class DashboardScreen(Screen):
 
     def action_quit_app(self) -> None:
         self.app.exit()
+
+    def action_cycle_theme(self) -> None:
+        """Cycle through available themes."""
+        from whatdoing.themes import PRESETS
+        from whatdoing.config import save_config
+        names = list(PRESETS.keys())
+        current = self.app.config.theme.get("name", "default")
+        try:
+            idx = names.index(current)
+        except ValueError:
+            idx = 0
+        next_name = names[(idx + 1) % len(names)]
+        self.app.config.theme["name"] = next_name
+        save_config(self.app.config)
+        self.app.refresh_css()
+        self.notify(f"Theme: {next_name}")
 
     # -- Event handlers --
 

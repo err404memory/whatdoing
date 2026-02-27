@@ -13,6 +13,7 @@ from textual.binding import Binding
 
 from whatdoing.config import load_config, Config
 from whatdoing.models import resolve_project
+from whatdoing.themes import build_theme_colors
 from whatdoing.screens.dashboard import DashboardScreen
 from whatdoing.screens.project import ProjectScreen
 from whatdoing.screens.scratchpad import ScratchpadScreen
@@ -29,6 +30,20 @@ class WhatDoingApp(App):
     BINDINGS = [
         Binding("ctrl+n", "quick_capture", "Quick Note", show=False, priority=True),
     ]
+
+    def get_css_variables(self) -> dict[str, str]:
+        """Override CSS variables with theme colors."""
+        variables = super().get_css_variables()
+        # get_css_variables is called during super().__init__(), before
+        # self.config is assigned — fall back to defaults in that case.
+        if hasattr(self, "config"):
+            colors = build_theme_colors(self.config.theme)
+            variables["background"] = colors.get("bg-color", variables.get("background", ""))
+            variables["surface"] = colors.get("surface", variables.get("surface", ""))
+            variables["primary"] = colors.get("primary", variables.get("primary", ""))
+            variables["secondary"] = colors.get("secondary", variables.get("secondary", ""))
+            variables["accent"] = colors.get("accent", variables.get("accent", ""))
+        return variables
 
     def __init__(self, config: Config | None = None, target: str = "") -> None:
         super().__init__()

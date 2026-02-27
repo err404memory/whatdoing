@@ -11,7 +11,7 @@ Screen {
     height: 1;
     width: 100%;
     padding: 0 1;
-    background: rgb(40, 40, 60);
+    background: $surface-darken-1;
     color: white;
     text-style: bold;
 }
@@ -46,7 +46,7 @@ Screen {
     height: 1;
     width: 100%;
     padding: 0 1;
-    background: rgb(40, 40, 60);
+    background: $surface-darken-1;
     color: white;
     text-style: bold;
 }
@@ -166,7 +166,7 @@ Screen {
     margin: 1 0;
     padding: 1 2;
     border: round red;
-    background: rgb(60, 20, 20);
+    background: $error-darken-3;
 }
 
 .editable-section.has-blockers.editing {
@@ -219,7 +219,7 @@ Screen {
     height: 1;
     width: 100%;
     padding: 0 1;
-    background: rgb(60, 40, 10);
+    background: $secondary;
     color: white;
     text-style: bold;
 }
@@ -236,7 +236,7 @@ Screen {
     height: 1;
     width: 100%;
     padding: 0 1;
-    background: rgb(20, 40, 60);
+    background: $primary;
     color: white;
     text-style: bold;
 }
