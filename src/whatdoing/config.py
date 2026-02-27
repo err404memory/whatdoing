@@ -1,7 +1,6 @@
 """Configuration loading and path resolution for whatdoing.
 
-Handles cross-device path detection (satellite rclone mount vs jeffrey direct),
-config file loading, and first-run setup.
+Handles cross-device path detection, config file loading, and first-run setup.
 """
 
 from __future__ import annotations
@@ -19,8 +18,9 @@ class Config:
     """Application configuration."""
 
     base_path: str = ""
-    overview_dir: str = "v1/dev-system/04 projects"
+    overview_dir: str = ""
     editor: str = ""
+    docker_host: str = ""  # SSH host for remote docker checks (e.g., "myserver")
     status_presets: list[str] = field(default_factory=lambda: [
         "Active", "Paused", "Backlog", "IN PROGRESS",
         "BLOCKED", "STUCK", "READY", "RUNNING",
@@ -73,16 +73,15 @@ def scratchpad_path() -> Path:
 def detect_base_path() -> str:
     """Auto-detect the project base path for the current machine.
 
-    Checks known paths for satellite (rclone mount) and jeffrey (direct).
+    Checks common locations for a projects directory.
     Returns empty string if nothing found (triggers first-run setup).
     """
     candidates = [
-        Path("/home/ash/server"),       # satellite (laptop, rclone mount)
-        Path("/home/ashes"),            # jeffrey (server, direct)
-        Path.home() / "server",         # generic fallback
+        Path.home() / "server",
+        Path.home() / "projects",
     ]
     for path in candidates:
-        if (path / "homelab").is_dir() or (path / "v1").is_dir():
+        if path.is_dir():
             return str(path)
     return ""
 
@@ -102,6 +101,7 @@ def load_config() -> Config:
         cfg.base_path = data.get("base_path", "")
         cfg.overview_dir = data.get("overview_dir", cfg.overview_dir)
         cfg.editor = data.get("editor", "")
+        cfg.docker_host = data.get("docker_host", "")
 
         if "status-presets" in data and isinstance(data["status-presets"], list):
             cfg.status_presets = data["status-presets"]

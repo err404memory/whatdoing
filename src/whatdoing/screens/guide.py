@@ -16,6 +16,49 @@ GUIDE_TEXT = """\
 **whatdoing** is your project dashboard — a single place to see everything you're working on,
 log what you did, and find your way back when you get lost.
 
+## First-Time Setup
+
+### 1. Create the config directory
+
+```
+mkdir -p ~/.whatdoing
+```
+
+### 2. Create `~/.whatdoing/config.yaml`
+
+```yaml
+# Required: path to directory containing your project folders
+base_path: /home/you/projects
+
+# Optional: subdirectory within base_path where projects live
+# Leave blank if projects are directly inside base_path
+overview_dir:
+
+# Optional: preferred text editor (defaults to micro, then $EDITOR, then nano)
+editor: nano
+
+# Optional: SSH host for remote docker status checks
+docker_host:
+```
+
+### 3. Set up your projects directory
+
+Each subdirectory in your base path is a project:
+
+```
+~/projects/
+  my-app/
+    _OVERVIEW.md
+  website/
+    _OVERVIEW.md
+  side-project/
+```
+
+Projects without an `_OVERVIEW.md` still appear (dimmed) and you can
+create one from inside the app by pressing `e`.
+
+You can also override the config directory with the `WHATDOING_HOME` env var.
+
 ## Keyboard Shortcuts
 
 ### Dashboard
@@ -32,16 +75,18 @@ log what you did, and find your way back when you get lost.
 ### Project View
 | Key | Action |
 |-----|--------|
-| `b` / `Esc` | Back to dashboard |
-| `e` | Edit overview file in editor |
-| `u` | Edit status (inline selector) |
-| `p` | Edit priority (inline selector) |
-| `n` | Edit next action (inline input) |
+| **click** / `Enter` | Edit a section inline |
+| `Ctrl+S` | Save section (while editing) |
+| `Esc` | Cancel edit (while editing) |
+| `a` | Add a new section |
+| `e` | Open full file in text editor |
+| `u` | Edit status |
+| `p` | Edit priority |
+| `n` | Edit next action |
 | `w` | Log work to journal |
 | `s` | Open scratchpad |
 | `l` | Open journal |
-| **click** | Click status, priority, or next action to edit inline |
-| `Esc` | Cancel edit / go back |
+| `b` / `Esc` | Back to dashboard |
 
 ### Scratchpad
 | Key | Action |
@@ -66,8 +111,13 @@ Status: Active
 Priority: High
 Next_action: What to do next
 Type: app
+Energy_required: high
+Time_estimate: 2h
 code_path: /path/to/code
 docker_name: container-name
+Tags:
+  - web
+  - python
 ---
 
 # Project Name
@@ -77,9 +127,16 @@ Description here.
 
 ## Blockers
 - Any blockers listed here show in a red box.
+
+## Next Steps
+- Step one
+- Step two
 ```
 
 3. The project appears automatically in the dashboard.
+
+All frontmatter fields are optional. Only `Status` and `Priority` are
+used for dashboard sorting and color-coding.
 
 ## File Locations
 

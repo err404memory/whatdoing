@@ -115,22 +115,83 @@ Screen {
     padding: 0 2;
 }
 
-#project-blockers {
+/* Sections container */
+#sections-container {
+    height: auto;
+    padding: 0;
+}
+
+/* ── Editable Sections ── */
+
+.editable-section {
+    height: auto;
+    margin: 0 0 1 0;
+    padding: 0;
+}
+
+.editable-section .section-heading {
+    height: auto;
+    padding: 0 1;
+}
+
+.editable-section .section-heading:hover {
+    background: $boost;
+}
+
+.editable-section:focus-within .section-heading {
+    text-style: bold;
+}
+
+.editable-section .section-display {
+    height: auto;
+    padding: 0 2;
+}
+
+.editable-section .section-editor {
+    height: auto;
+    min-height: 8;
+    max-height: 20;
+    margin: 0 1;
+    border: round cyan;
+}
+
+/* Edit mode indicator */
+.editable-section.editing {
+    border-left: thick cyan;
+    padding-left: 1;
+}
+
+/* Blocker section — red box when blockers exist */
+.editable-section.has-blockers {
     margin: 1 0;
     padding: 1 2;
     border: round red;
     background: rgb(60, 20, 20);
-    height: auto;
 }
 
-#project-content {
+.editable-section.has-blockers.editing {
+    border: round cyan;
+    border-left: thick cyan;
+}
+
+/* Preamble (read-only content before first section) */
+.section-preamble {
     height: auto;
     padding: 0 1;
+    margin: 0 0 1 0;
 }
 
 #project-extra {
     height: auto;
     padding: 0 1;
+}
+
+/* Add-section input */
+#input-add-section {
+    dock: bottom;
+    margin: 0 1;
+    height: 3;
+    border: round $accent;
 }
 
 #live-header {

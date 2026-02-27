@@ -2,9 +2,11 @@
 
 Interaction model:
 - Status, priority, and next action are clickable inline-editable fields
-- Select widget for status/priority (dropdown-style, only active when editing)
-- Input widget for free-text fields (next action, work log)
+- Each ## section in the overview is rendered as an EditableSection widget
+- Click a section (or press Enter) to edit its raw markdown in a TextArea
+- Ctrl+S saves the section, Esc cancels
 - 'e' opens the full file in micro (suspends TUI, resumes after)
+- 'a' adds a new ## section at the end
 - Projects without _OVERVIEW.md offer to create one
 """
 
@@ -20,12 +22,12 @@ from textual.containers import Vertical, VerticalScroll, Horizontal
 from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import (
-    Footer, Label, Markdown, Static, Input, Select, Button,
+    Footer, Label, Markdown, Static, Input, Select, Button, TextArea,
 )
 from rich.text import Text
 
 from whatdoing.models import Project
-from whatdoing.parser import parse_document
+from whatdoing.parser import parse_document, write_section
 from whatdoing.services import git, docker, files
 from whatdoing.services.journal import log_work
 
@@ -71,6 +73,9 @@ None
 """
 
 
+# ── Custom widgets ──────────────────────────────────────────────
+
+
 class ClickableField(Static):
     """A label that can be clicked to trigger editing."""
 
@@ -93,6 +98,123 @@ class ClickableField(Static):
             event.stop()
 
 
+class SectionTextArea(TextArea):
+    """TextArea that emits save/cancel messages on Ctrl+S / Escape."""
+
+    BINDINGS = [
+        Binding("ctrl+s", "save_section", "Save", show=False),
+        Binding("escape", "cancel_section", "Cancel", show=False),
+    ]
+
+    class SaveRequested(Message):
+        pass
+
+    class CancelRequested(Message):
+        pass
+
+    def action_save_section(self) -> None:
+        self.post_message(self.SaveRequested())
+
+    def action_cancel_section(self) -> None:
+        self.post_message(self.CancelRequested())
+
+
+class EditableSection(Vertical):
+    """A ## section that toggles between Markdown display and TextArea edit.
+
+    Display mode: heading label + rendered Markdown content (clickable)
+    Edit mode: TextArea with raw markdown, Ctrl+S saves, Esc cancels
+    """
+
+    class Saved(Message):
+        """Posted when a section is saved."""
+        def __init__(self, heading: str, content: str) -> None:
+            super().__init__()
+            self.heading = heading
+            self.content = content
+
+    def __init__(
+        self, heading: str, content: str, is_blocker: bool = False, **kwargs
+    ) -> None:
+        super().__init__(**kwargs)
+        self.heading = heading
+        self.section_content = content
+        self.is_blocker = is_blocker
+        self._in_edit = False
+        self.can_focus = True
+
+    def compose(self) -> ComposeResult:
+        yield Static(self._heading_markup(), classes="section-heading")
+        yield Markdown(self.section_content, classes="section-display")
+        yield SectionTextArea("", classes="section-editor")
+
+    def on_mount(self) -> None:
+        self.query_one(".section-editor", SectionTextArea).display = False
+        self._apply_blocker_style()
+
+    def _heading_markup(self) -> str:
+        if self.is_blocker:
+            return "[bold red]  \u25a0 BLOCKERS[/]  [dim]\u270e[/]"
+        return f"[bold]  {self.heading}[/]  [dim]\u270e[/]"
+
+    def _apply_blocker_style(self) -> None:
+        if self.is_blocker:
+            trimmed = self.section_content.strip()
+            if trimmed and not trimmed.lower().startswith("none"):
+                self.add_class("has-blockers")
+            else:
+                self.remove_class("has-blockers")
+
+    def _enter_edit(self) -> None:
+        if self._in_edit:
+            return
+        self._in_edit = True
+        self.add_class("editing")
+        display = self.query_one(".section-display", Markdown)
+        editor = self.query_one(".section-editor", SectionTextArea)
+        display.display = False
+        editor.text = self.section_content
+        editor.display = True
+        editor.focus()
+
+    def _exit_edit(self, save: bool = False) -> None:
+        if not self._in_edit:
+            return
+        self._in_edit = False
+        self.remove_class("editing")
+        display = self.query_one(".section-display", Markdown)
+        editor = self.query_one(".section-editor", SectionTextArea)
+
+        if save:
+            self.section_content = editor.text
+            display.update(self.section_content)
+            self._apply_blocker_style()
+            self.post_message(self.Saved(self.heading, self.section_content))
+
+        editor.display = False
+        display.display = True
+
+    def on_click(self, event) -> None:
+        if not self._in_edit:
+            self._enter_edit()
+
+    def on_key(self, event) -> None:
+        if not self._in_edit and event.key == "enter":
+            self._enter_edit()
+            event.stop()
+
+    def on_section_text_area_save_requested(self, event: SectionTextArea.SaveRequested) -> None:
+        self._exit_edit(save=True)
+        event.stop()
+
+    def on_section_text_area_cancel_requested(self, event: SectionTextArea.CancelRequested) -> None:
+        self._exit_edit(save=False)
+        event.stop()
+
+
+# ── Project Screen ──────────────────────────────────────────────
+
+
 class ProjectScreen(Screen):
     """Full drill-in view for a single project."""
 
@@ -103,6 +225,7 @@ class ProjectScreen(Screen):
         Binding("u", "edit_status", "Status", show=True),
         Binding("p", "edit_priority", "Priority", show=True),
         Binding("n", "edit_next", "Next", show=True),
+        Binding("a", "add_section", "Add Section", show=True),
         Binding("w", "log_work", "Log Work", show=True),
         Binding("s", "open_scratchpad", "Scratch", show=True),
         Binding("l", "open_journal", "Journal", show=True),
@@ -134,8 +257,10 @@ class ProjectScreen(Screen):
         yield Input(placeholder="New next action...", id="input-next")
 
         with VerticalScroll(id="project-body"):
-            yield Static("", id="project-blockers")
-            yield Markdown("", id="project-content")
+            # Dynamic per-section editable blocks
+            yield Vertical(id="sections-container")
+
+            # PROJECT.md extra content
             yield Static("", id="project-extra")
 
             # Live data panel
@@ -144,6 +269,8 @@ class ProjectScreen(Screen):
             yield Static("", id="live-git")
             yield Static("", id="live-docker")
 
+        # Add-section input (hidden)
+        yield Input(placeholder="New section name...", id="input-add-section")
         # Work log input
         yield Input(placeholder="What did you work on?...", id="input-worklog")
         yield Footer()
@@ -154,6 +281,7 @@ class ProjectScreen(Screen):
         self.query_one("#select-status", Select).display = False
         self.query_one("#select-priority", Select).display = False
         self.query_one("#input-next", Input).display = False
+        self.query_one("#input-add-section", Input).display = False
         self.query_one("#input-worklog", Input).display = False
 
         if self.project and self.project.has_overview:
@@ -161,6 +289,14 @@ class ProjectScreen(Screen):
             self._fetch_live_data()
         elif self.project and not self.project.has_overview:
             self._render_empty_project()
+
+    def on_screen_resume(self) -> None:
+        """Refresh project data when returning from another screen."""
+        if self.project:
+            self.project = Project.from_directory(self.project.dir_path)
+            if self.project.has_overview:
+                self._render_project()
+                self._fetch_live_data()
 
     def _render_empty_project(self) -> None:
         """Render a project that has no _OVERVIEW.md file."""
@@ -176,15 +312,24 @@ class ProjectScreen(Screen):
         self.query_one("#field-type", Static).update("")
         self.query_one("#field-meta", Static).update("")
         self.query_one("#field-next", ClickableField).update("")
-        self.query_one("#project-blockers", Static).display = False
 
-        self.query_one("#project-content", Markdown).update(
-            f"## No `_OVERVIEW.md` found\n\n"
-            f"This project directory exists but has no overview file.\n\n"
-            f"Press **e** to create one and open it in your editor."
+        container = self.query_one("#sections-container", Vertical)
+        container.remove_children()
+        container.mount(
+            Markdown(
+                f"## No `_OVERVIEW.md` found\n\n"
+                f"This project directory exists but has no overview file.\n\n"
+                f"Press **e** to create one and open it in your editor."
+            )
         )
 
     def _render_project(self) -> None:
+        """Full render — metadata + sections."""
+        self._render_metadata()
+        self._render_sections()
+
+    def _render_metadata(self) -> None:
+        """Update header, status row, and next action display."""
         p = self.project
         if not p or not p.doc:
             return
@@ -226,42 +371,69 @@ class ProjectScreen(Screen):
             f"  [cyan]Next:[/] {na} [dim]\u270e[/]"
         )
 
-        # Blockers
-        blockers_widget = self.query_one("#project-blockers", Static)
-        blockers = p.doc.get_section("Blockers")
-        trimmed = blockers.strip() if blockers else ""
-        if trimmed and not trimmed.lower().startswith("none"):
-            blockers_widget.update(
-                f"[bold red]  BLOCKERS[/]\n"
-                f"[red]  {trimmed}[/]"
+    def _render_sections(self) -> None:
+        """Build per-section editable widgets from the parsed document."""
+        p = self.project
+        if not p or not p.doc:
+            return
+
+        container = self.query_one("#sections-container", Vertical)
+        container.remove_children()
+
+        doc = p.doc
+
+        # Preamble: content between # Title and first ## section
+        preamble = self._get_preamble(doc.body)
+        if preamble.strip():
+            container.mount(Markdown(preamble, classes="section-preamble"))
+
+        # Editable sections
+        for heading, content in doc.sections.items():
+            is_blocker = heading.lower() == "blockers"
+            section = EditableSection(
+                heading=heading,
+                content=content,
+                is_blocker=is_blocker,
+                classes="editable-section",
             )
-            blockers_widget.display = True
-        else:
-            blockers_widget.display = False
+            container.mount(section)
 
-        # Body (minus Blockers and title)
-        body_text = p.doc.body_without("Blockers")
-        body_lines = body_text.split("\n")
-        body_lines = [ln for ln in body_lines if not (ln.startswith("# ") and not ln.startswith("## "))]
-        body_text = "\n".join(body_lines).strip()
-
-        # Merge PROJECT.md
+        # Merge PROJECT.md extra sections (read-only)
         extra_widget = self.query_one("#project-extra", Static)
         extra_widget.update("")
         if p.code_path:
             project_md = Path(p.code_path) / "PROJECT.md"
             if project_md.exists():
                 secondary = parse_document(project_md)
-                primary_headings = set(p.doc.sections.keys())
-                extra_sections = []
+                primary_headings = set(doc.sections.keys())
+                extra_parts = []
                 for heading, content in secondary.sections.items():
                     if heading not in primary_headings and content.strip():
-                        extra_sections.append(f"## {heading}\n{content}")
-                if extra_sections:
-                    extra_widget.update("[dim]\u2500\u2500 from PROJECT.md \u2500\u2500[/]")
-                    body_text += "\n\n" + "\n\n".join(extra_sections)
+                        extra_parts.append(f"## {heading}\n{content}")
+                if extra_parts:
+                    extra_widget.update(
+                        "[dim]\u2500\u2500 from PROJECT.md \u2500\u2500[/]"
+                    )
+                    # Mount extra sections as read-only Markdown
+                    container.mount(
+                        Markdown("\n\n".join(extra_parts), classes="extra-sections")
+                    )
 
-        self.query_one("#project-content", Markdown).update(body_text)
+    @staticmethod
+    def _get_preamble(body: str) -> str:
+        """Get content between # Title and first ## section."""
+        lines = body.split("\n")
+        result: list[str] = []
+        past_title = False
+        for line in lines:
+            if line.startswith("# ") and not line.startswith("## "):
+                past_title = True
+                continue
+            if line.startswith("## "):
+                break
+            if past_title:
+                result.append(line)
+        return "\n".join(result).strip()
 
     def _fetch_live_data(self) -> None:
         if not self.project:
@@ -290,12 +462,13 @@ class ProjectScreen(Screen):
             f"  [bold white]GIT[/]             {git_info}"
         )
 
-        dock_info = await docker.container_status(docker_name)
+        docker_host = getattr(self.app.config, "docker_host", "")
+        dock_info = await docker.container_status(docker_name, remote_host=docker_host)
         self.query_one("#live-docker", Static).update(
             f"  [bold white]DOCKER[/]          {dock_info}"
         )
 
-    # -- Inline editing --
+    # -- Inline editing (status / priority / next action) --
 
     def _show_editor(self, field: str) -> None:
         """Show the appropriate inline editor for a field."""
@@ -328,12 +501,19 @@ class ProjectScreen(Screen):
             inp.display = True
             inp.focus()
 
+        elif field == "add_section":
+            inp = self.query_one("#input-add-section", Input)
+            inp.value = ""
+            inp.display = True
+            inp.focus()
+
     def _hide_editors(self) -> None:
         """Hide all inline editors."""
         self._editing = ""
         self.query_one("#select-status", Select).display = False
         self.query_one("#select-priority", Select).display = False
         self.query_one("#input-next", Input).display = False
+        self.query_one("#input-add-section", Input).display = False
         self.query_one("#input-worklog", Input).display = False
 
     # -- Actions --
@@ -384,6 +564,10 @@ class ProjectScreen(Screen):
         if self.project and self.project.has_overview:
             self._show_editor("next_action")
 
+    def action_add_section(self) -> None:
+        if self.project and self.project.has_overview:
+            self._show_editor("add_section")
+
     def action_log_work(self) -> None:
         if self.project:
             self._show_editor("log_work")
@@ -406,6 +590,18 @@ class ProjectScreen(Screen):
         if self.project and self.project.has_overview:
             self._show_editor(event.field_id)
 
+    def on_editable_section_saved(self, event: EditableSection.Saved) -> None:
+        """Handle section save — write updated content to disk."""
+        if not self.project:
+            return
+        overview = self.project.dir_path / "_OVERVIEW.md"
+        write_section(overview, event.heading, event.content)
+
+        # Reload the parsed document so future edits see fresh data
+        self.project = Project.from_directory(self.project.dir_path)
+        self.notify(f"Saved: {event.heading}")
+        event.stop()
+
     def on_select_changed(self, event: Select.Changed) -> None:
         """Handle selection from inline Select widget.
 
@@ -423,7 +619,7 @@ class ProjectScreen(Screen):
                 self.project.status = value
                 self.notify(f"Status \u2192 {value}")
                 self._hide_editors()
-                self._render_project()
+                self._render_metadata()
 
         elif event.select.id == "select-priority" and self._editing == "priority":
             if self.project:
@@ -431,7 +627,7 @@ class ProjectScreen(Screen):
                 self.project.priority = value
                 self.notify(f"Priority \u2192 {value}")
                 self._hide_editors()
-                self._render_project()
+                self._render_metadata()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle Enter in an inline Input widget."""
@@ -443,9 +639,18 @@ class ProjectScreen(Screen):
                 self.project.next_action = value
                 self.notify("Next action updated")
                 self._hide_editors()
-                self._render_project()
+                self._render_metadata()
             else:
                 self._hide_editors()
+
+        elif event.input.id == "input-add-section" and self._editing == "add_section":
+            if self.project and value:
+                overview = self.project.dir_path / "_OVERVIEW.md"
+                write_section(overview, value, "")
+                self.project = Project.from_directory(self.project.dir_path)
+                self._render_sections()
+                self.notify(f"Added: ## {value}")
+            self._hide_editors()
 
         elif event.input.id == "input-worklog" and self._editing == "log_work":
             if self.project and value:

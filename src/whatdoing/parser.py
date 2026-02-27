@@ -135,6 +135,57 @@ def _extract_metadata(doc: ParsedDocument) -> None:
         doc.sections[current_heading] = "\n".join(current_content).strip()
 
 
+def write_section(path: Path, heading: str, new_content: str) -> None:
+    """Update a ## section's content in a markdown file.
+
+    Finds the ## heading in the body (after frontmatter) and replaces
+    everything between it and the next ## heading (or EOF) with new_content.
+    If the heading doesn't exist, appends a new section at the end.
+    """
+    if not path.exists():
+        return
+
+    text = path.read_text(encoding="utf-8")
+    lines = text.split("\n")
+
+    # Find body start (skip frontmatter)
+    body_start = 0
+    if lines and lines[0].strip() == "---":
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                body_start = i + 1
+                break
+
+    # Find the target section boundaries
+    section_start = -1
+    section_end = len(lines)
+
+    for i in range(body_start, len(lines)):
+        if lines[i].startswith("## "):
+            if section_start >= 0:
+                # Found the next section — this is our end boundary
+                section_end = i
+                break
+            if lines[i][3:].strip() == heading:
+                section_start = i
+
+    if section_start >= 0:
+        # Replace: keep heading line, replace content up to next section
+        replacement = [lines[section_start], ""]  # ## Heading + blank line
+        if new_content.strip():
+            replacement.extend(new_content.split("\n"))
+        replacement.append("")  # Blank line before next section
+
+        result = lines[:section_start] + replacement + lines[section_end:]
+        path.write_text("\n".join(result), encoding="utf-8")
+    else:
+        # Section doesn't exist — append at end
+        if not text.endswith("\n"):
+            text += "\n"
+        text += f"\n## {heading}\n\n{new_content}\n"
+        path.write_text(text, encoding="utf-8")
+
+
 def merge_documents(primary: ParsedDocument, secondary: ParsedDocument) -> str:
     """Merge unique sections from secondary into primary body.
 
