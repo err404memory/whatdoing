@@ -49,6 +49,26 @@ PRIORITY_OPTIONS = [
     ("Low", "Low"),
 ]
 
+
+def _normalize_status(value: str) -> str:
+    """Normalize status to match SELECT options (case-insensitive lookup)."""
+    if not value:
+        return ""
+    for _, option_value in STATUS_OPTIONS:
+        if value.lower() == option_value.lower():
+            return option_value
+    return value  # Fallback to original if no match
+
+
+def _normalize_priority(value: str) -> str:
+    """Normalize priority to match SELECT options (case-insensitive lookup)."""
+    if not value:
+        return ""
+    for _, option_value in PRIORITY_OPTIONS:
+        if value.lower() == option_value.lower():
+            return option_value
+    return value  # Fallback to original if no match
+
 OVERVIEW_TEMPLATE = """\
 ---
 Status: Backlog
@@ -478,14 +498,14 @@ class ProjectScreen(Screen):
             sel = self.query_one("#select-status", Select)
             # Set value BEFORE showing to prevent spurious Changed events
             if self.project and self.project.status:
-                sel.value = self.project.status
+                sel.value = _normalize_status(self.project.status)
             sel.display = True
             sel.focus()
 
         elif field == "priority":
             sel = self.query_one("#select-priority", Select)
             if self.project and self.project.priority:
-                sel.value = self.project.priority
+                sel.value = _normalize_priority(self.project.priority)
             sel.display = True
             sel.focus()
 
