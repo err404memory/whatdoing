@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical, VerticalScroll
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen, ModalScreen
-from textual.widgets import Checkbox, DataTable, Footer, Input, Label, Static
+from textual.widgets import Button, Checkbox, DataTable, Footer, Input, Label, Static
 from rich.text import Text
 
 from whatdoing.config import load_config, load_state, save_state, save_config
@@ -120,8 +120,15 @@ class DashboardScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Static("", id="dashboard-header")
+        with Horizontal(id="button-bar"):
+            for item in self.config.buttons.get("items", []):
+                if item.get("context"):
+                    continue  # Context buttons added dynamically
+                yield Button(item["label"], id=f"btn-{item['action']}", classes="bar-button")
         yield Input(placeholder="Type to filter projects...", id="filter-input")
         yield DataTable(id="project-table")
+        with Horizontal(id="context-bar"):
+            pass
         yield Static("", id="dashboard-stats")
         yield Footer()
 
@@ -327,6 +334,48 @@ class DashboardScreen(Screen):
         self.notify(f"Theme: {next_name}")
 
     # -- Event handlers --
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id or ""
+        action = btn_id.replace("btn-", "", 1)
+
+        if action.startswith("screen:"):
+            screen_name = action.split(":", 1)[1]
+            self.app.push_screen(screen_name)
+        elif action == "new_project":
+            self.notify("Use 'a' in any project to add sections, or create a directory in your projects folder")
+        elif action.startswith("open_url:"):
+            import webbrowser
+            key = action.split(":", 1)[1]
+            table = self.query_one("#project-table", DataTable)
+            if table.cursor_row is not None and table.cursor_row < len(self.filtered_projects):
+                project = self.filtered_projects[table.cursor_row]
+                if project.doc:
+                    url = project.doc.get(key, "")
+                    if url:
+                        webbrowser.open(url)
+                        self.notify(f"Opened {key}")
+                    else:
+                        self.notify(f"No {key} for this project", severity="warning")
+
+    def on_data_table_cursor_changed(self, event) -> None:
+        """Update context buttons when cursor moves."""
+        context_bar = self.query_one("#context-bar", Horizontal)
+        context_bar.remove_children()
+
+        table = self.query_one("#project-table", DataTable)
+        if table.cursor_row is not None and table.cursor_row < len(self.filtered_projects):
+            project = self.filtered_projects[table.cursor_row]
+            if project.doc:
+                for item in self.config.buttons.get("items", []):
+                    if not item.get("context"):
+                        continue
+                    action = item.get("action", "")
+                    key = action.split(":", 1)[1] if ":" in action else ""
+                    val = project.doc.get(key, "")
+                    if val:
+                        btn = Button(item["label"], id=f"btn-{action}", classes="ctx-button")
+                        context_bar.mount(btn)
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "filter-input":

@@ -16,6 +16,34 @@ Screen {
     text-style: bold;
 }
 
+/* ── Button Bar ── */
+
+#button-bar {
+    dock: top;
+    height: 3;
+    padding: 0 1;
+    background: $surface;
+}
+
+.bar-button {
+    margin: 0 1 0 0;
+    min-width: 10;
+    height: 3;
+}
+
+#context-bar {
+    height: auto;
+    max-height: 3;
+    padding: 0 1;
+}
+
+.ctx-button {
+    margin: 0 1 0 0;
+    min-width: 8;
+    height: 3;
+    border: round $accent;
+}
+
 #filter-input {
     dock: top;
     margin: 0 1;
