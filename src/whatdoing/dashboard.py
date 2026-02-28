@@ -17,10 +17,7 @@ from whatdoing.screens.project import ProjectScreen
 
 
 def _sanitize_id(raw: str) -> str:
-    """Sanitize a string into a valid Textual widget ID.
-
-    Textual IDs: letters, numbers, underscores, hyphens only. No leading digit.
-    """
+    """Sanitize a string into a valid Textual widget ID."""
     s = re.sub(r'[^a-zA-Z0-9_-]', '-', raw)
     s = re.sub(r'-+', '-', s).strip('-')
     if s and s[0].isdigit():
@@ -74,6 +71,15 @@ class ColumnPickerScreen(ModalScreen):
         self.config = config
 
     def compose(self) -> ComposeResult:
+        """Generates a column picker interface for the dashboard.
+        
+        This function creates a vertical layout containing a title and a scrollable
+        list of checkboxes  representing available columns. Each checkbox reflects
+        whether the column is active or a core  column, with appropriate labels derived
+        from COLUMN_LABELS. The function also formats section  headers for columns that
+        start with "## ". The layout is wrapped in a Vertical container for  proper
+        alignment and presentation.
+        """
         with Vertical(id="column-picker-container"):
             yield Label("Dashboard Columns", id="column-picker-title")
             with VerticalScroll():
@@ -94,6 +100,18 @@ class ColumnPickerScreen(ModalScreen):
                     )
 
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        """Handle changes to a checkbox state.
+        
+        This function updates the dashboard_columns in the configuration  based on the
+        state of the checkbox represented by the event. If  the checkbox corresponds to
+        a core column, no action is taken.  If the checkbox is checked and not already
+        in the dashboard_columns,  it is added. Conversely, if the checkbox is
+        unchecked and present  in the dashboard_columns, it is removed. Finally, the
+        updated  configuration is saved using the save_config function.
+        
+        Args:
+            event (Checkbox.Changed): The event containing the checkbox state change.
+        """
         col_key = event.checkbox.name
         if col_key in CORE_COLUMNS:
             return
@@ -106,6 +124,7 @@ class ColumnPickerScreen(ModalScreen):
         save_config(self.config)
 
     def action_close(self) -> None:
+        """Closes the current action."""
         self.dismiss()
 
 
@@ -134,6 +153,7 @@ class DashboardScreen(Screen):
         self._button_actions: dict[str, str] = {}  # widget_id -> action string
 
     def compose(self) -> ComposeResult:
+        """Generates dashboard components for the user interface."""
         yield Static("", id="dashboard-header")
         with Horizontal(id="button-bar"):
             for item in self.config.buttons.get("items", []):
@@ -150,6 +170,7 @@ class DashboardScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
+        """Initializes the project table and sets focus on it."""
         self._load_projects()
         self._setup_table()
         self._populate_table()
@@ -168,6 +189,7 @@ class DashboardScreen(Screen):
         table.focus()
 
     def _load_projects(self) -> None:
+        """Load and filter projects from the configured projects path."""
         self.projects = scan_projects(self.config.projects_path)
         self.filtered_projects = list(self.projects)
 
@@ -184,7 +206,22 @@ class DashboardScreen(Screen):
             table.add_column(label, key=col_key)
 
     def _get_cell_value(self, project: Project, col_key: str) -> Text:
-        """Return a styled Text object for any column key."""
+        """Return a styled Text object for a specified column key from a project.
+        
+        The function retrieves a styled Text representation based on the provided
+        col_key. It first checks if the project has an overview; if not, it returns
+        default values for certain keys. For keys like "status", "priority", and
+        "next_action", it formats the output accordingly. Additionally, it attempts to
+        fetch values from the project's frontmatter, handling various formats and
+        conditions to ensure a proper return value.
+        
+        Args:
+            project (Project): The project object containing relevant data.
+            col_key (str): The key for which the cell value is to be retrieved.
+        
+        Returns:
+            Text: A styled Text object representing the value for the specified column key.
+        """
         if not project.has_overview:
             if col_key == "project":
                 return Text(project.name, style="dim italic")
@@ -230,6 +267,18 @@ class DashboardScreen(Screen):
             return Text("—", style="dim")
 
     def _populate_table(self, filter_text: str = "") -> None:
+        """Populate the project table with filtered project data.
+        
+        This function retrieves the project table and clears any existing data. It then
+        filters the projects based on the provided `filter_text`, checking against
+        various project attributes. The filtered projects are added to the table, and
+        the last viewed project is highlighted if applicable. Finally, it updates the
+        statistics related to the projects.
+        
+        Args:
+            filter_text (str?): A string to filter projects by their name, next action, status, or project
+                type. Defaults to an empty string.
+        """
         table = self.query_one("#project-table", DataTable)
         table.clear()
 
@@ -259,6 +308,7 @@ class DashboardScreen(Screen):
         self._update_stats()
 
     def _update_header(self) -> None:
+        """Update the dashboard header with a specific format."""
         header = self.query_one("#dashboard-header", Static)
         header.update(
             "[bold bright_white on rgb(40,40,60)]"
@@ -293,21 +343,26 @@ class DashboardScreen(Screen):
             self.app.push_screen(ProjectScreen(project=project))
 
     def action_cursor_down(self) -> None:
+        """Moves the cursor down in the project table."""
         self.query_one("#project-table", DataTable).action_cursor_down()
 
     def action_cursor_up(self) -> None:
+        """Moves the cursor up in the project table."""
         self.query_one("#project-table", DataTable).action_cursor_up()
 
     def action_focus_filter(self) -> None:
         self.query_one("#filter-input", Input).focus()
 
     def action_open_scratchpad(self) -> None:
+        """Open the scratchpad screen."""
         self.app.push_screen("scratchpad")
 
     def action_open_journal(self) -> None:
+        """Open the journal screen."""
         self.app.push_screen("journal")
 
     def action_open_guide(self) -> None:
+        """Open the guide screen."""
         self.app.push_screen("guide")
 
     def action_edit_columns(self) -> None:
@@ -333,6 +388,7 @@ class DashboardScreen(Screen):
         )
 
     def action_quit_app(self) -> None:
+        """Exit the application."""
         self.app.exit()
 
     def action_cycle_theme(self) -> None:
@@ -376,7 +432,15 @@ class DashboardScreen(Screen):
                         self.notify(f"No {key} for this project", severity="warning")
 
     def on_data_table_cursor_changed(self, event) -> None:
-        """Update context buttons when cursor moves."""
+        """Update context buttons when cursor moves.
+        
+        This function updates the context bar with buttons based on the currently
+        selected project in the data table. It first clears the existing buttons and
+        checks if the cursor is within the bounds of the filtered projects. If a valid
+        project is selected, it retrieves the associated document and dynamically
+        creates buttons based on the configuration items that have a context. Each
+        button is linked to an action defined in the configuration.
+        """
         context_bar = self.query_one("#context-bar", Horizontal)
         context_bar.remove_children()
 
@@ -397,13 +461,16 @@ class DashboardScreen(Screen):
                         context_bar.mount(btn)
 
     def on_input_changed(self, event: Input.Changed) -> None:
+        """Handles changes to the input and updates the table if necessary."""
         if event.input.id == "filter-input":
             self._populate_table(event.value)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handles the input submission event for filtering."""
         if event.input.id == "filter-input":
             # Return focus to table after filtering
             self.query_one("#project-table", DataTable).focus()
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Handles the selection of a row in the data table."""
         self.action_select_project()
