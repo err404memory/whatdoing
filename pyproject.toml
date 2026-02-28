@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "whatdoing"
-version = "2.2.1"
+version = "2.3.0"
 description = "Terminal dashboard for tracking what you're working on"
 readme = "README.md"
 license = "MIT"

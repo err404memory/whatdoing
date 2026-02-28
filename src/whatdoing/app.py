@@ -34,9 +34,7 @@ class WhatDoingApp(App):
     def get_css_variables(self) -> dict[str, str]:
         """Override CSS variables with theme colors."""
         variables = super().get_css_variables()
-        # get_css_variables is called during super().__init__(), before
-        # self.config is assigned — fall back to defaults in that case.
-        if hasattr(self, "config"):
+        if hasattr(self, "config"):  # guard for edge cases during init
             colors = build_theme_colors(self.config.theme)
             variables["background"] = colors.get("bg-color", variables.get("background", ""))
             variables["surface"] = colors.get("surface", variables.get("surface", ""))
@@ -60,9 +58,9 @@ class WhatDoingApp(App):
                     pass  # textual-image not installed, skip gracefully
 
     def __init__(self, config: Config | None = None, target: str = "") -> None:
-        super().__init__()
         self.config = config or load_config()
         self._target = target
+        super().__init__()
 
     def on_mount(self) -> None:
         # Install named screens for navigation

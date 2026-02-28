@@ -134,15 +134,28 @@ class DashboardScreen(Screen):
         self._button_actions: dict[str, str] = {}  # widget_id -> action string
 
     def compose(self) -> ComposeResult:
-        yield Static("", id="dashboard-header")
-        with Horizontal(id="button-bar"):
-            for item in self.config.buttons.get("items", []):
-                if item.get("context"):
-                    continue
-                widget_id = f"btn-{_sanitize_id(item['action'])}"
-                self._button_actions[widget_id] = item["action"]
-                yield Button(item["label"], id=widget_id, variant="primary", classes="bar-button")
-        yield Input(placeholder="Type to filter projects...", id="filter-input")
+        with Horizontal(id="top-bar"):
+            yield Static("whatdoing", id="app-title")
+            with Horizontal(id="top-bar-right"):
+                for item in self.config.buttons.get("items", []):
+                    action = item.get("action", "")
+                    if action == "screen:guide" or item.get("context"):
+                        continue
+                    if action == "new_project":
+                        continue
+                    widget_id = f"btn-{_sanitize_id(action)}"
+                    self._button_actions[widget_id] = action
+                    yield Button(item["label"], id=widget_id, classes="bar-button")
+        with Horizontal(id="filter-row"):
+            new_item = next(
+                (i for i in self.config.buttons.get("items", []) if i.get("action") == "new_project"),
+                None,
+            )
+            if new_item:
+                widget_id = f"btn-{_sanitize_id('new_project')}"
+                self._button_actions[widget_id] = "new_project"
+                yield Button("+", id=widget_id, classes="new-button")
+            yield Input(placeholder="Type to filter projects...", id="filter-input")
         yield DataTable(id="project-table")
         with Horizontal(id="context-bar"):
             pass
@@ -153,7 +166,6 @@ class DashboardScreen(Screen):
         self._load_projects()
         self._setup_table()
         self._populate_table()
-        self._update_header()
         self.query_one("#project-table", DataTable).focus()
 
     def on_screen_resume(self) -> None:
@@ -257,14 +269,6 @@ class DashboardScreen(Screen):
             table.move_cursor(row=highlight_row)
 
         self._update_stats()
-
-    def _update_header(self) -> None:
-        header = self.query_one("#dashboard-header", Static)
-        header.update(
-            "[bold bright_white on rgb(40,40,60)]"
-            "  \u2588\u2588 whatdoing "
-            "[/]"
-        )
 
     def _update_stats(self) -> None:
         stats = self.query_one("#dashboard-stats", Static)

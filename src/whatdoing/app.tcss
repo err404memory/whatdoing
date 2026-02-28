@@ -4,52 +4,103 @@ Screen {
     background: $background;
 }
 
-/* ── Dashboard ── */
+/* ── Dashboard Top Bar ── */
 
-#dashboard-header {
-    height: 1;
-    width: 100%;
-    padding: 0 1;
+#top-bar {
+    height: 3;
+    align: center middle;
     background: $surface-darken-1;
-    color: white;
-    text-style: bold;
 }
 
-/* ── Button Bar ── */
+#app-title {
+    width: 1fr;
+    content-align: left middle;
+    height: 3;
+    padding: 0 0 0 2;
+    color: $accent;
+}
 
-#button-bar {
-    height: auto;
-    max-height: 3;
-    padding: 0 1;
-    background: $surface-lighten-1;
+#top-bar-right {
+    width: auto;
+    align: right middle;
+    height: 3;
+    padding: 0 4;
 }
 
 .bar-button {
-    margin: 0 0 0 1;
-    min-width: 10;
-    height: 1;
-}
-
-#context-bar {
-    height: auto;
-    max-height: 3;
-    padding: 0 1;
-}
-
-.ctx-button {
-    margin: 0 1 0 0;
-    min-width: 8;
+    margin: 0 1;
+    min-width: 12;
     height: 3;
+    background: transparent;
+    color: $accent;
+    text-style: bold;
+    border: round $primary-lighten-2;
+}
+
+.bar-button:hover {
+    color: white;
     border: round $accent;
 }
 
+.bar-button:focus {
+    color: white;
+    border: round $accent;
+    background: $accent;
+}
+
+/* ── Filter Row ── */
+
+#filter-row {
+    height: 3;
+    padding: 0 1;
+}
+
+.new-button {
+    min-width: 5;
+    width: 5;
+    height: 3;
+    background: transparent;
+    color: $accent;
+    text-style: bold;
+    border: round $primary-lighten-2;
+}
+
+.new-button:hover {
+    color: white;
+    border: round $accent;
+}
+
+.new-button:focus {
+    color: white;
+    border: round $accent;
+    background: $accent;
+}
+
 #filter-input {
-    margin: 0 1;
+    width: 1fr;
+    margin: 0 0 0 1;
     height: 3;
     border: round $primary-lighten-2;
 }
 
 #filter-input:focus {
+    border: round $accent;
+}
+
+/* ── Context Bar ── */
+
+#context-bar {
+    height: auto;
+    max-height: 3;
+    padding: 0 1;
+    align-horizontal: center;
+}
+
+.ctx-button {
+    margin: 0 1;
+    min-width: 8;
+    height: 3;
+    color: white;
     border: round $accent;
 }
 
