@@ -134,6 +134,15 @@ class DashboardScreen(Screen):
         self._button_actions: dict[str, str] = {}  # widget_id -> action string
 
     def compose(self) -> ComposeResult:
+        """Compose the user interface components for the application.
+        
+        This function generates a layout for the application by yielding various UI
+        elements  such as buttons, input fields, and static text. It organizes these
+        elements into horizontal  sections, filtering out certain buttons based on
+        their actions. The function also handles  the creation of a new project button
+        and a filter input for project management, while  maintaining a mapping of
+        button actions for further processing.
+        """
         with Horizontal(id="top-bar"):
             yield Static("whatdoing", id="app-title")
             with Horizontal(id="top-bar-right"):
@@ -271,6 +280,13 @@ class DashboardScreen(Screen):
         self._update_stats()
 
     def _update_stats(self) -> None:
+        """Update the dashboard statistics based on project statuses.
+        
+        This method retrieves the current statistics from the dashboard and  calculates
+        the total number of projects, as well as the counts of  projects in various
+        states: active, blocked, paused, and those  missing an overview. It then
+        updates the dashboard with these  statistics in a formatted string.
+        """
         stats = self.query_one("#dashboard-stats", Static)
         total = len(self.projects)
         active = sum(1 for p in self.projects if p.status.lower() in ("active", "in progress", "running"))
