@@ -48,7 +48,7 @@ class WhatDoingApp(App):
         return variables
 
     def compose(self) -> ComposeResult:
-        """Compose the main app. Optionally adds background image."""
+        """Compose the main app and optionally add a background image."""
         bg_image = self.config.theme.get("background-image", "")
         if bg_image:
             if Path(bg_image).exists():
@@ -93,7 +93,7 @@ class WhatDoingApp(App):
 
 
 def main() -> None:
-    """CLI entry point."""
+    """CLI entry point for the WhatDoing application."""
     args = parse_args()
 
     if args.version:
@@ -116,7 +116,7 @@ def main() -> None:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parse CLI args for command/project targets."""
+    """Parse CLI args for command or project targets."""
     parser = argparse.ArgumentParser(
         prog="whatdoing",
         description="terminal dashboard for tracking what you're working on",
