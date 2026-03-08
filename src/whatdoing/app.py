@@ -5,7 +5,7 @@ Main entry point. Launches the Textual TUI app.
 
 from __future__ import annotations
 
-import sys
+import argparse
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -36,10 +36,14 @@ class WhatDoingApp(App):
         variables = super().get_css_variables()
         if hasattr(self, "config"):  # guard for edge cases during init
             colors = build_theme_colors(self.config.theme)
-            variables["background"] = colors.get("bg-color", variables.get("background", ""))
+            variables["background"] = colors.get(
+                "bg-color", variables.get("background", "")
+            )
             variables["surface"] = colors.get("surface", variables.get("surface", ""))
             variables["primary"] = colors.get("primary", variables.get("primary", ""))
-            variables["secondary"] = colors.get("secondary", variables.get("secondary", ""))
+            variables["secondary"] = colors.get(
+                "secondary", variables.get("secondary", "")
+            )
             variables["accent"] = colors.get("accent", variables.get("accent", ""))
         return variables
 
@@ -47,8 +51,6 @@ class WhatDoingApp(App):
         """Compose the main app. Optionally adds background image."""
         bg_image = self.config.theme.get("background-image", "")
         if bg_image:
-            from pathlib import Path
-
             if Path(bg_image).exists():
                 try:
                     from textual_image.widget import Image
@@ -92,6 +94,14 @@ class WhatDoingApp(App):
 
 def main() -> None:
     """CLI entry point."""
+    args = parse_args()
+
+    if args.version:
+        from whatdoing import __version__
+
+        print(f"whatdoing {__version__}")
+        return
+
     config = load_config()
 
     # Check if projects path exists
@@ -101,30 +111,23 @@ def main() -> None:
         print(f"Run 'whatdoing guide' for setup help.")
         # Still launch — guide screen will help
 
-    target = sys.argv[1] if len(sys.argv) > 1 else ""
-
-    if target == "--help":
-        print("whatdoing — terminal dashboard for tracking what you're working on")
-        print()
-        print("Usage: whatdoing [command|project-name]")
-        print()
-        print("Commands:")
-        print("  (no args)     Dashboard — show all projects")
-        print("  <name>        Jump to a project (fuzzy match)")
-        print("  scratch       Open scratchpad")
-        print("  journal       Open journal")
-        print("  guide         User guide")
-        print("  --help        This message")
-        print("  --version     Show version")
-        return
-
-    if target == "--version":
-        from whatdoing import __version__
-        print(f"whatdoing {__version__}")
-        return
-
-    app = WhatDoingApp(config=config, target=target)
+    app = WhatDoingApp(config=config, target=args.target)
     app.run()
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse CLI args for command/project targets."""
+    parser = argparse.ArgumentParser(
+        prog="whatdoing",
+        description="terminal dashboard for tracking what you're working on",
+    )
+    parser.add_argument("target", nargs="?", default="", help="command or project name")
+    parser.add_argument("--version", action="store_true", help="show version")
+
+    args, extras = parser.parse_known_args(argv)
+    if not args.target and extras:
+        args.target = extras[0]
+    return args
 
 
 if __name__ == "__main__":

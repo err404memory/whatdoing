@@ -9,10 +9,28 @@ description = "Terminal dashboard for tracking what you're working on"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Terminals",
+]
 dependencies = [
     "textual>=0.86.0",
     "pyyaml>=6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/err404memory/whatdoing"
+Repository = "https://github.com/err404memory/whatdoing"
+Issues = "https://github.com/err404memory/whatdoing/issues"
 
 [project.scripts]
 whatdoing = "whatdoing.app:main"
