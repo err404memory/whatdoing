@@ -48,14 +48,16 @@ Each subdirectory in your base path is a project:
 ```
 ~/projects/
   my-app/
-    _OVERVIEW.md
+    overview.md
   website/
-    _OVERVIEW.md
+    overview.md
   side-project/
 ```
 
-Projects without an `_OVERVIEW.md` still appear (dimmed) and you can
+Projects without an `overview.md` still appear (dimmed) and you can
 create one from inside the app by pressing `e`.
+
+Legacy names `_OVERVIEW.md`, `PROJECT.md`, and `project.md` are still read automatically.
 
 You can also override the config directory with the `WHATDOING_HOME` env var.
 
@@ -103,7 +105,7 @@ You can also override the config directory with the `WHATDOING_HOME` env var.
 ## Adding a Project
 
 1. Create a directory in your projects folder
-2. Add an `_OVERVIEW.md` file with YAML frontmatter:
+2. Add an `overview.md` file with YAML frontmatter:
 
 ```yaml
 ---
@@ -134,6 +136,8 @@ Description here.
 ```
 
 3. The project appears automatically in the dashboard.
+
+Compatibility: legacy overview filenames `_OVERVIEW.md`, `PROJECT.md`, and `project.md` are still supported for reading.
 
 All frontmatter fields are optional. Only `Status` and `Priority` are
 used for dashboard sorting and color-coding.
@@ -166,7 +170,7 @@ Search across all entries from the journal screen.
 
 All whatdoing data is plain markdown + YAML. You can ask an AI assistant to:
 - Read your project overviews to understand current state
-- Help update _OVERVIEW.md files
+- Help update overview files
 - Search journal entries for what you worked on
 - Suggest next actions based on blockers and priorities
 

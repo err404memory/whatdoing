@@ -7,7 +7,7 @@ Interaction model:
 - Ctrl+S saves the section, Esc cancels
 - 'e' opens the full file in micro (suspends TUI, resumes after)
 - 'a' adds a new ## section at the end
-- Projects without _OVERVIEW.md offer to create one
+- Projects without an overview file offer to create one
 """
 
 from __future__ import annotations
@@ -22,11 +22,19 @@ from textual.containers import Vertical, VerticalScroll, Horizontal
 from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import (
-    Checkbox, Footer, Label, Markdown, Static, Input, Select, Button, TextArea,
+    Checkbox,
+    Footer,
+    Label,
+    Markdown,
+    Static,
+    Input,
+    Select,
+    Button,
+    TextArea,
 )
 from rich.text import Text
 
-from whatdoing.models import Project
+from whatdoing.models import Project, canonical_overview_path
 from whatdoing.parser import parse_document, write_section
 from whatdoing.services import git, docker, files
 from whatdoing.services.journal import log_work
@@ -86,6 +94,7 @@ def _normalize_priority(value: str, config=None) -> str:
         if value.lower() == option_value.lower():
             return option_value
     return value  # Fallback to original if no match
+
 
 OVERVIEW_TEMPLATE = """\
 ---
@@ -166,6 +175,7 @@ class EditableSection(Vertical):
 
     class Saved(Message):
         """Posted when a section is saved."""
+
         def __init__(self, heading: str, content: str) -> None:
             super().__init__()
             self.heading = heading
@@ -247,7 +257,7 @@ class EditableSection(Vertical):
         if not cb_id.startswith(prefix):
             return
 
-        line_idx = int(cb_id[len(prefix):])
+        line_idx = int(cb_id[len(prefix) :])
         self.section_content = toggle_checkbox(self.section_content, line_idx)
         self.post_message(self.Saved(self.heading, self.section_content))
         event.stop()
@@ -290,11 +300,15 @@ class EditableSection(Vertical):
             self._enter_edit()
             event.stop()
 
-    def on_section_text_area_save_requested(self, event: SectionTextArea.SaveRequested) -> None:
+    def on_section_text_area_save_requested(
+        self, event: SectionTextArea.SaveRequested
+    ) -> None:
         self._exit_edit(save=True)
         event.stop()
 
-    def on_section_text_area_cancel_requested(self, event: SectionTextArea.CancelRequested) -> None:
+    def on_section_text_area_cancel_requested(
+        self, event: SectionTextArea.CancelRequested
+    ) -> None:
         self._exit_edit(save=False)
         event.stop()
 
@@ -323,7 +337,9 @@ class ProjectScreen(Screen):
     def __init__(self, project: Project | None = None) -> None:
         super().__init__()
         self.project = project
-        self._editing: str = ""  # Which field is being edited ("status", "priority", etc.)
+        self._editing: str = (
+            ""  # Which field is being edited ("status", "priority", etc.)
+        )
         self._adding_new: str = ""  # Which field is getting a new custom option
 
     def compose(self) -> ComposeResult:
@@ -378,8 +394,12 @@ class ProjectScreen(Screen):
 
         # Build Select options from config presets
         config = self.app.config
-        self.query_one("#select-status", Select).set_options(_build_status_options(config))
-        self.query_one("#select-priority", Select).set_options(_build_priority_options(config))
+        self.query_one("#select-status", Select).set_options(
+            _build_status_options(config)
+        )
+        self.query_one("#select-priority", Select).set_options(
+            _build_priority_options(config)
+        )
 
         if self.project and self.project.has_overview:
             self._render_project()
@@ -395,12 +415,17 @@ class ProjectScreen(Screen):
                 self._render_project()
                 self._fetch_live_data()
 
+    def _overview_path(self) -> Path:
+        if not self.project:
+            return Path("overview.md")
+        if self.project.overview_path:
+            return self.project.overview_path
+        return canonical_overview_path(self.project.dir_path)
+
     def _render_empty_project(self) -> None:
-        """Render a project that has no _OVERVIEW.md file."""
+        """Render a project that has no overview file."""
         self.query_one("#project-header", Static).update(
-            f"[bold bright_white on rgb(40,40,60)]"
-            f"  {self.project.name} "
-            f"[/]"
+            f"[bold bright_white on rgb(40,40,60)]  {self.project.name} [/]"
         )
         self.query_one("#field-status", ClickableField).update(
             "  [dim italic]no overview file[/]"
@@ -414,7 +439,7 @@ class ProjectScreen(Screen):
         container.remove_children()
         container.mount(
             Markdown(
-                f"## No `_OVERVIEW.md` found\n\n"
+                f"## No overview file found\n\n"
                 f"This project directory exists but has no overview file.\n\n"
                 f"Press **e** to create one and open it in your editor."
             )
@@ -433,9 +458,7 @@ class ProjectScreen(Screen):
 
         # Header
         self.query_one("#project-header", Static).update(
-            f"[bold bright_white on rgb(40,40,60)]"
-            f"  {p.title or p.name} "
-            f"[/]"
+            f"[bold bright_white on rgb(40,40,60)]  {p.title or p.name} [/]"
         )
 
         # Clickable status
@@ -542,9 +565,15 @@ class ProjectScreen(Screen):
         self.query_one("#live-header", Static).update(
             "\n[dim]\u2500\u2500\u2500\u2500\u2500 [/][bold] Live [/][dim]\u2500\u2500\u2500\u2500\u2500[/]\n"
         )
-        self.query_one("#live-modified", Static).update("  [bold white]LAST MODIFIED[/]   loading...")
-        self.query_one("#live-git", Static).update("  [bold white]GIT[/]             loading...")
-        self.query_one("#live-docker", Static).update("  [bold white]DOCKER[/]          loading...")
+        self.query_one("#live-modified", Static).update(
+            "  [bold white]LAST MODIFIED[/]   loading..."
+        )
+        self.query_one("#live-git", Static).update(
+            "  [bold white]GIT[/]             loading..."
+        )
+        self.query_one("#live-docker", Static).update(
+            "  [bold white]DOCKER[/]          loading..."
+        )
 
         self.run_worker(self._load_live_data(code, docker_name))
 
@@ -631,12 +660,12 @@ class ProjectScreen(Screen):
         if not self.project:
             return
 
-        overview = self.project.dir_path / "_OVERVIEW.md"
+        overview = self._overview_path()
 
         # Create overview if it doesn't exist
         if not overview.exists():
             overview.write_text(OVERVIEW_TEMPLATE.format(name=self.project.name))
-            self.notify("Created _OVERVIEW.md")
+            self.notify(f"Created {overview.name}")
 
         editor = self.app.config.resolved_editor
 
@@ -693,7 +722,7 @@ class ProjectScreen(Screen):
         """Handle section save — write updated content to disk."""
         if not self.project:
             return
-        overview = self.project.dir_path / "_OVERVIEW.md"
+        overview = self._overview_path()
         write_section(overview, event.heading, event.content)
 
         # Reload the parsed document so future edits see fresh data
@@ -764,7 +793,7 @@ class ProjectScreen(Screen):
 
         elif event.input.id == "input-add-section" and self._editing == "add_section":
             if self.project and value:
-                overview = self.project.dir_path / "_OVERVIEW.md"
+                overview = self._overview_path()
                 write_section(overview, value, "")
                 self.project = Project.from_directory(self.project.dir_path)
                 self._render_sections()
@@ -774,6 +803,7 @@ class ProjectScreen(Screen):
         elif event.input.id == "input-new-option" and self._adding_new:
             if value:
                 from whatdoing.config import save_config
+
                 config = self.app.config
                 if self._adding_new == "status":
                     if value not in config.status_presets:
@@ -781,7 +811,9 @@ class ProjectScreen(Screen):
                         save_config(config)
                     self._write_yaml("Status", value)
                     self.project.status = value
-                    self.query_one("#select-status", Select).set_options(_build_status_options(config))
+                    self.query_one("#select-status", Select).set_options(
+                        _build_status_options(config)
+                    )
                     self.notify(f"Status \u2192 {value} (added to presets)")
                 elif self._adding_new == "priority":
                     if value not in config.priority_presets:
@@ -789,7 +821,9 @@ class ProjectScreen(Screen):
                         save_config(config)
                     self._write_yaml("Priority", value)
                     self.project.priority = value
-                    self.query_one("#select-priority", Select).set_options(_build_priority_options(config))
+                    self.query_one("#select-priority", Select).set_options(
+                        _build_priority_options(config)
+                    )
                     self.notify(f"Priority \u2192 {value} (added to presets)")
                 self._adding_new = ""
                 self._hide_editors()
@@ -819,7 +853,7 @@ class ProjectScreen(Screen):
         """
         if not self.project:
             return
-        overview = self.project.dir_path / "_OVERVIEW.md"
+        overview = self._overview_path()
         if not overview.exists():
             return
 
@@ -855,8 +889,7 @@ class ProjectScreen(Screen):
             lines[key_line] = formatted
 
             # Remove any list items that follow (handles "Key:\n- item" format)
-            while (key_line + 1 < len(lines)
-                   and lines[key_line + 1].startswith("- ")):
+            while key_line + 1 < len(lines) and lines[key_line + 1].startswith("- "):
                 lines.pop(key_line + 1)
 
         elif frontmatter_end > 0:

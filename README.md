@@ -23,9 +23,9 @@ whatdoing needs a directory where each subdirectory is a project. The structure 
 ```
 ~/projects/
   my-app/
-    _OVERVIEW.md
+    overview.md
   website/
-    _OVERVIEW.md
+    overview.md
   side-project/
 ```
 
@@ -54,11 +54,11 @@ docker_host: myserver
 
 ### 2. Add a project
 
-Create a directory with an `_OVERVIEW.md` file:
+Create a directory with an `overview.md` file:
 
 ```bash
 mkdir -p ~/projects/my-app
-cat > ~/projects/my-app/_OVERVIEW.md << 'EOF'
+cat > ~/projects/my-app/overview.md << 'EOF'
 ---
 Status: Active
 Priority: High
@@ -84,7 +84,9 @@ EOF
 whatdoing
 ```
 
-Projects without an `_OVERVIEW.md` still appear in the dashboard (dimmed) and you can create one from inside the app.
+Projects without an `overview.md` still appear in the dashboard (dimmed) and you can create one from inside the app.
+
+Compatibility: legacy overview filenames `_OVERVIEW.md`, `PROJECT.md`, and `project.md` are still supported for reading.
 
 ## Usage
 
@@ -127,7 +129,7 @@ whatdoing --help          This message
 
 ## YAML Frontmatter
 
-Each `_OVERVIEW.md` supports these frontmatter fields:
+Each `overview.md` supports these frontmatter fields:
 
 ```yaml
 ---

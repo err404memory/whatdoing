@@ -10,8 +10,12 @@ from whatdoing.parser import ParsedDocument, parse_document
 
 # Status sort rank: lower = higher priority in list
 STATUS_RANK = {
-    "active": 1, "in progress": 1, "running": 1,
-    "ready": 2, "stuck": 2, "blocked": 2,
+    "active": 1,
+    "in progress": 1,
+    "running": 1,
+    "ready": 2,
+    "stuck": 2,
+    "blocked": 2,
     "paused": 3,
     "backlog": 4,
 }
@@ -20,7 +24,8 @@ PRIORITY_RANK = {"high": 1, "medium": 2, "med": 2, "low": 3}
 
 # Status -> Rich color name for display
 STATUS_COLORS = {
-    "active": "green", "running": "green",
+    "active": "green",
+    "running": "green",
     "in progress": "dodger_blue1",
     "ready": "cyan",
     "paused": "yellow",
@@ -30,13 +35,32 @@ STATUS_COLORS = {
 }
 
 PRIORITY_COLORS = {
-    "high": "red", "medium": "yellow", "med": "yellow", "low": "dim",
+    "high": "red",
+    "medium": "yellow",
+    "med": "yellow",
+    "low": "dim",
 }
+
+OVERVIEW_CANDIDATES = ["overview.md", "project.md", "_OVERVIEW.md", "PROJECT.md"]
+
+
+def find_overview_file(dir_path: Path) -> Path | None:
+    """Return the first existing overview filename in preferred order."""
+    for filename in OVERVIEW_CANDIDATES:
+        candidate = dir_path / filename
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def canonical_overview_path(dir_path: Path) -> Path:
+    """Return the canonical overview file path for a project directory."""
+    return dir_path / "overview.md"
 
 
 @dataclass
 class Project:
-    """A project loaded from an _OVERVIEW.md file."""
+    """A project loaded from an overview file."""
 
     name: str
     dir_path: Path
@@ -52,6 +76,7 @@ class Project:
     tags: list[str] = field(default_factory=list)
     title: str = ""  # from # heading in body
     doc: ParsedDocument | None = None
+    overview_path: Path | None = None
 
     @property
     def sort_key(self) -> tuple[int, int, str]:
@@ -70,12 +95,14 @@ class Project:
 
     @classmethod
     def from_directory(cls, dir_path: Path) -> Project:
-        """Load a project from a directory containing _OVERVIEW.md."""
-        overview = dir_path / "_OVERVIEW.md"
+        """Load a project from a directory containing an overview file."""
+        overview = find_overview_file(dir_path)
         name = dir_path.name
 
-        if not overview.exists():
-            return cls(name=name, dir_path=dir_path, has_overview=False)
+        if overview is None:
+            return cls(
+                name=name, dir_path=dir_path, has_overview=False, overview_path=None
+            )
 
         doc = parse_document(overview)
 
@@ -100,13 +127,14 @@ class Project:
             tags=tags,
             title=doc.title or name,
             doc=doc,
+            overview_path=overview,
         )
 
 
 def scan_projects(projects_path: Path) -> list[Project]:
     """Scan for all project directories and return sorted list.
 
-    Shows ALL directories, even those without _OVERVIEW.md (marked has_overview=False).
+    Shows ALL directories, even those without an overview file (marked has_overview=False).
     """
     if not projects_path.exists():
         return []

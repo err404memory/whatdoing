@@ -1,7 +1,7 @@
 """Robust YAML frontmatter + markdown parser.
 
 Handles malformed YAML gracefully — never crashes on bad input.
-Designed to parse _OVERVIEW.md and PROJECT.md files.
+Designed to parse overview files (overview.md, project.md, _OVERVIEW.md, PROJECT.md).
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ def parse_document(path: Path) -> ParsedDocument:
         pass
 
     # Body is everything after the closing ---
-    doc.body = "\n".join(lines[end_idx + 1:])
+    doc.body = "\n".join(lines[end_idx + 1 :])
     _extract_metadata(doc)
     return doc
 
@@ -205,7 +205,7 @@ def merge_documents(primary: ParsedDocument, secondary: ParsedDocument) -> str:
 
 # ── Checkbox helpers ───────────────────────────────────────────
 
-CHECKBOX_RE = re.compile(r'^(\s*)- \[([ xX])\] (.+)$')
+CHECKBOX_RE = re.compile(r"^(\s*)- \[([ xX])\] (.+)$")
 
 
 def parse_checkboxes(content: str) -> list[dict]:
@@ -217,13 +217,15 @@ def parse_checkboxes(content: str) -> list[dict]:
     for i, line in enumerate(content.split("\n")):
         m = CHECKBOX_RE.match(line)
         if m:
-            results.append({
-                "line_idx": i,
-                "indent": len(m.group(1)),
-                "checked": m.group(2) in ("x", "X"),
-                "text": m.group(3),
-                "raw_line": line,
-            })
+            results.append(
+                {
+                    "line_idx": i,
+                    "indent": len(m.group(1)),
+                    "checked": m.group(2) in ("x", "X"),
+                    "text": m.group(3),
+                    "raw_line": line,
+                }
+            )
     return results
 
 
@@ -236,5 +238,5 @@ def toggle_checkbox(content: str, line_idx: int) -> str:
     if "- [ ]" in line:
         lines[line_idx] = line.replace("- [ ]", "- [x]", 1)
     elif "- [x]" in line or "- [X]" in line:
-        lines[line_idx] = re.sub(r'- \[[xX]\]', '- [ ]', line, count=1)
+        lines[line_idx] = re.sub(r"- \[[xX]\]", "- [ ]", line, count=1)
     return "\n".join(lines)
