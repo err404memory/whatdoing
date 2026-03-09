@@ -249,7 +249,7 @@ class EditableSection(Vertical):
             display.mount(Markdown("\n".join(buffer)))
 
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
-        """Toggle checkbox in content and write to disk."""
+        """Toggle checkbox state and update content."""
         from whatdoing.parser import toggle_checkbox
 
         cb_id = event.checkbox.id or ""
@@ -303,12 +303,16 @@ class EditableSection(Vertical):
     def on_section_text_area_save_requested(
         self, event: SectionTextArea.SaveRequested
     ) -> None:
+        """Handles the save request for the section text area."""
+        """Handles the save request for the section text area."""
         self._exit_edit(save=True)
         event.stop()
 
     def on_section_text_area_cancel_requested(
         self, event: SectionTextArea.CancelRequested
     ) -> None:
+        """Handle the cancel request for the section text area."""
+        """Handle the cancel request for the section text area."""
         self._exit_edit(save=False)
         event.stop()
 
@@ -385,6 +389,15 @@ class ProjectScreen(Screen):
     def on_mount(self) -> None:
         # CRITICAL: Hide ALL inline editors before anything else
         # This prevents Select.Changed from firing with default values
+        """Hide inline editors and set up select options on mount.
+        
+        This method is called when the component is mounted. It first hides all inline
+        editors  to prevent any default value changes from triggering events. Then, it
+        builds select options  for status and priority from the application
+        configuration. Depending on the state of the  project, it either renders the
+        project overview and fetches live data or renders an empty  project view if no
+        overview is available.
+        """
         self.query_one("#select-status", Select).display = False
         self.query_one("#select-priority", Select).display = False
         self.query_one("#input-new-option", Input).display = False
@@ -416,6 +429,7 @@ class ProjectScreen(Screen):
                 self._fetch_live_data()
 
     def _overview_path(self) -> Path:
+        """Return the overview path for the project."""
         if not self.project:
             return Path("overview.md")
         if self.project.overview_path:
@@ -451,7 +465,15 @@ class ProjectScreen(Screen):
         self._render_sections()
 
     def _render_metadata(self) -> None:
-        """Update header, status row, and next action display."""
+        """Update the project metadata display in the user interface.
+        
+        This function updates various UI components with the project's metadata,
+        including the header, status, priority, type, meta information, and next
+        action. It retrieves the project details from `self.project` and ensures  that
+        the project and its documentation are available before proceeding with  the
+        updates. Each UI element is updated with formatted strings to enhance  the
+        visual representation of the project's current state.
+        """
         p = self.project
         if not p or not p.doc:
             return
@@ -556,6 +578,7 @@ class ProjectScreen(Screen):
         return "\n".join(result).strip()
 
     def _fetch_live_data(self) -> None:
+        """Fetch and update live data for the project."""
         if not self.project:
             return
 
@@ -656,7 +679,7 @@ class ProjectScreen(Screen):
             self.app.pop_screen()
 
     def action_edit_file(self) -> None:
-        """Open the overview file in micro, suspending the TUI."""
+        """Edit the overview file using the configured editor."""
         if not self.project:
             return
 
@@ -719,7 +742,7 @@ class ProjectScreen(Screen):
             self._show_editor(event.field_id)
 
     def on_editable_section_saved(self, event: EditableSection.Saved) -> None:
-        """Handle section save — write updated content to disk."""
+        """Handle section save by writing updated content to disk."""
         if not self.project:
             return
         overview = self._overview_path()
@@ -778,7 +801,18 @@ class ProjectScreen(Screen):
                 self._render_metadata()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle Enter in an inline Input widget."""
+        """Handle input submission events for various actions in the application.
+        
+        This function processes input submissions from an inline Input widget, handling
+        different types of actions based on the input ID and the current editing state.
+        It updates project attributes, writes to YAML files, and manages the visibility
+        of editors. The function also interacts with configuration settings for status
+        and priority presets, ensuring that changes are reflected in the application's
+        state.
+        
+        Args:
+            event (Input.Submitted): The event containing the submitted input value and associated metadata.
+        """
         value = event.value.strip()
 
         if event.input.id == "input-next" and self._editing == "next_action":
@@ -843,13 +877,17 @@ class ProjectScreen(Screen):
 
     def _write_yaml(self, key: str, value: str) -> None:
         """Update a YAML frontmatter value in the overview file.
-
-        Handles all formats:
-        - Standard: 'Key: value'
-        - Quoted: 'Key: "value with spaces"'
-        - Null: 'Key: null'
-        - List format: 'Key:\\n- item' (replaces with scalar)
-        - Missing key: appends before closing ---
+        
+        This function handles various formats for YAML frontmatter values, including
+        standard key-value pairs, quoted values with spaces, null values, and list
+        formats. It checks for the existence of the specified key and updates its value
+        accordingly, or appends the key before the closing frontmatter delimiter if it
+        does not exist. The function also ensures that any list items following the key
+        are removed when updating.
+        
+        Args:
+            key (str): The key in the YAML frontmatter to update or add.
+            value (str): The value to set for the specified key.
         """
         if not self.project:
             return
