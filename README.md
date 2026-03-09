@@ -171,6 +171,14 @@ Tags:
 
 Override the config directory with `WHATDOING_HOME` env var.
 
+## Support
+
+This project is open-source and free to use.
+
+Optional paid support and implementation services may be introduced in the future for teams that want faster setup, migration, and workflow customization.
+
+If that would be useful, open an issue titled `commercial support interest`.
+
 ## License
 
 MIT
