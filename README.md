@@ -16,6 +16,19 @@ Or with pip:
 pip install whatdoing
 ```
 
+## Platform Compatibility
+
+- **Tested:** Linux terminals
+- **Likely works:** macOS and WSL
+- **Windows native:** may work in modern terminals, but not yet a primary tested target
+
+No special shell is required (`bash`, `zsh`, etc.) — `whatdoing` is a Python CLI app, not a shell script.
+
+Optional integrations depend on tools you have installed:
+- Git activity widgets require `git`
+- Docker status widgets require local `docker` or `ssh` access to a remote Docker host
+- If those tools are missing, whatdoing degrades gracefully (e.g., `git not found` or `—`)
+
 ## Setup
 
 whatdoing needs a directory where each subdirectory is a project. The structure looks like:
