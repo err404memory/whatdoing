@@ -132,9 +132,14 @@ class Project:
 
 
 def scan_projects(projects_path: Path) -> list[Project]:
-    """Scan for all project directories and return sorted list.
-
-    Shows ALL directories, even those without an overview file (marked has_overview=False).
+    """def scan_projects(projects_path: Path) -> list[Project]:
+    
+    Scan for all project directories and return a sorted list.  This function
+    iterates through the specified `projects_path`, checking each item to determine
+    if it is a directory  and does not start with a dot or underscore. It collects
+    valid project directories into a list, which is then  sorted based on whether
+    each project has an overview file and a secondary sort key. The final sorted
+    list of  projects is returned.
     """
     if not projects_path.exists():
         return []

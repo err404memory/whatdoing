@@ -54,12 +54,19 @@ class ParsedDocument:
 
 def parse_document(path: Path) -> ParsedDocument:
     """Parse a markdown file with optional YAML frontmatter.
-
-    Handles:
-    - Files with no frontmatter (just markdown)
-    - Malformed YAML (returns empty dict, preserves body)
-    - YAML values that are lists, null, or missing
-    - Horizontal rules (---) in the body
+    
+    This function reads a markdown file specified by the given path and processes
+    it to extract both the frontmatter and the body content. It handles various
+    scenarios, including files without frontmatter, malformed YAML, and horizontal
+    rules. The function also ensures that any errors during file reading or YAML
+    parsing do not disrupt the overall processing, allowing for a robust extraction
+    of metadata.
+    
+    Args:
+        path (Path): The path to the markdown file to be parsed.
+    
+    Returns:
+        ParsedDocument: An object containing the parsed frontmatter and body of the document.
     """
     doc = ParsedDocument()
 
@@ -209,10 +216,7 @@ CHECKBOX_RE = re.compile(r"^(\s*)- \[([ xX])\] (.+)$")
 
 
 def parse_checkboxes(content: str) -> list[dict]:
-    """Parse markdown checkbox lines from content.
-
-    Returns list of dicts: {line_idx, indent, checked, text, raw_line}
-    """
+    """Parse markdown checkbox lines from content."""
     results = []
     for i, line in enumerate(content.split("\n")):
         m = CHECKBOX_RE.match(line)
@@ -230,7 +234,13 @@ def parse_checkboxes(content: str) -> list[dict]:
 
 
 def toggle_checkbox(content: str, line_idx: int) -> str:
-    """Toggle a checkbox on a specific line in content."""
+    """Toggle a checkbox on a specific line in content.
+    
+    This function modifies the checkbox state on a specified line of the  provided
+    content string. It checks if the line index is valid and  toggles the checkbox
+    from unchecked ("- [ ]") to checked ("- [x]")  or vice versa. If the line index
+    is out of bounds, the original  content is returned unchanged.
+    """
     lines = content.split("\n")
     if line_idx < 0 or line_idx >= len(lines):
         return content
