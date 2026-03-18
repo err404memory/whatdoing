@@ -91,10 +91,7 @@ def detect_base_path() -> str:
     Checks common locations for a projects directory.
     Returns empty string if nothing found (triggers first-run setup).
     """
-    candidates = [
-        Path.home() / "server",
-        Path.home() / "projects",
-    ]
+    candidates = [Path.home() / "projects"]
     for path in candidates:
         if path.is_dir():
             return str(path)

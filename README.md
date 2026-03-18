@@ -2,7 +2,7 @@
 
 Terminal dashboard for tracking what you're working on. Shows all your projects at a glance, lets you drill into any one, and surfaces live data (git activity, Docker status, last modified file) without leaving the terminal.
 
-Built for ADHD brains managing dozens of unfinished projects across multiple devices.
+Designed for people managing many active projects across multiple devices.
 
 ## Install
 
@@ -178,6 +178,22 @@ This project is open-source and free to use.
 Optional paid support and implementation services may be introduced in the future for teams that want faster setup, migration, and workflow customization.
 
 If that would be useful, open an issue titled `commercial support interest`.
+
+## Public Safety Check
+
+Run the repo audit before publishing or opening a PR:
+
+```bash
+./scripts/public-safety-audit.sh
+```
+
+If you want a local pre-commit guard for staged files:
+
+```bash
+./scripts/install-public-safety-hook.sh
+```
+
+The audit scans for generic home-path leaks, SSH/scp-style host references, obvious secret-key markers, and suspicious local artifact filenames such as transcript dumps. If a match is intentional, add a path glob to `.public-safety-allowlist`. If you want the audit to catch your own machine names or local path fragments, put custom regex patterns in `.public-safety-local-patterns` and keep that file local only.
 
 ## License
 

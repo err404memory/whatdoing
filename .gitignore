@@ -7,5 +7,7 @@ build/
 .mypy_cache/
 .pytest_cache/
 *.egg
-
 docs/plans/
+.directory
+20*-whatdoing-*.txt
+.public-safety-local-patterns

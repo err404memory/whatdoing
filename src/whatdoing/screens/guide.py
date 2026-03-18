@@ -28,7 +28,7 @@ mkdir -p ~/.whatdoing
 
 ```yaml
 # Required: path to directory containing your project folders
-base_path: /home/you/projects
+base_path: ~/projects
 
 # Optional: subdirectory within base_path where projects live
 # Leave blank if projects are directly inside base_path
@@ -158,7 +158,7 @@ Press `w` in any project view to log what you worked on.
 Entries are timestamped and saved to daily markdown files.
 Search across all entries from the journal screen.
 
-## Tips for ADHD Workflow
+## Tips for Managing Many Projects
 
 - **Always log work** (`w`) before switching projects — future-you will thank past-you
 - **Use the scratchpad** for random thoughts that pop up mid-task
