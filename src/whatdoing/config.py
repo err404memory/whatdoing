@@ -86,11 +86,7 @@ def scratchpad_path() -> Path:
 
 
 def detect_base_path() -> str:
-    """Auto-detect the project base path for the current machine.
-
-    Checks common locations for a projects directory.
-    Returns empty string if nothing found (triggers first-run setup).
-    """
+    """Auto-detect the project base path for the current machine."""
     candidates = [Path.home() / "projects"]
     for path in candidates:
         if path.is_dir():
