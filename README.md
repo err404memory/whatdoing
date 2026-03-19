@@ -1,73 +1,123 @@
 # whatdoing
 
-Terminal dashboard for tracking what you're working on. Shows all your projects at a glance, lets you drill into any one, and surfaces live data (git activity, Docker status, last modified file) without leaving the terminal.
+Terminal dashboard for tracking what you're working on. It shows your projects in one place, lets you drill into any one, and surfaces live data such as git activity, Docker status, and last modified files without leaving the terminal.
 
-Designed for people managing many active projects across multiple devices.
+It is most useful when you are juggling several active projects across one or more machines.
 
-## Install
+## Uses
+
+- tracking many active repos from one terminal dashboard
+- keeping one lightweight project record per directory in plain Markdown
+- checking status, next action, and project health without opening every repo
+- maintaining a scratchpad and journal beside the dashboard
+- staying oriented across frequent context switches
+
+## Fit
+
+Best for:
+
+- a terminal-first project dashboard
+- one overview file per project that you can still edit directly
+- live project signals such as git state, container state, and file freshness
+- a lighter-weight alternative to a full team PM system
+
+Less useful for:
+
+- a web app or GUI-first project tracker
+- an issue tracker for large teams
+- a system that hides its source files from you
+- a single-project workflow with no need for cross-project overview
+
+## Start
+
+Install with `pipx`:
 
 ```bash
 pipx install whatdoing
 ```
 
-Or with pip:
+Or with `pip`:
 
 ```bash
 pip install whatdoing
 ```
 
-## Platform Compatibility
+Create the smallest working setup:
+
+```bash
+mkdir -p ~/.whatdoing ~/projects
+printf '%s\n' 'base_path: ~/projects' > ~/.whatdoing/config.yaml
+```
+
+Launch:
+
+```bash
+whatdoing
+```
+
+Success criteria:
+
+- the dashboard opens in your terminal
+- each subdirectory in `~/projects` appears as a project row
+- dimmed rows are still valid; they just do not have an `overview.md` yet
+- press `e` inside a project to open or create its overview file
+
+## Compatibility
 
 - **Tested:** Linux terminals
 - **Likely works:** macOS and WSL
-- **Windows native:** may work in modern terminals, but not yet a primary tested target
+- **Windows native:** use WSL for the best current experience
 
-No special shell is required (`bash`, `zsh`, etc.) — `whatdoing` is a Python CLI app, not a shell script.
+No special shell is required (`bash`, `zsh`, and similar all work). `whatdoing` is a normal Python CLI app.
 
-Optional integrations depend on tools you have installed:
-- Git activity widgets require `git`
-- Docker status widgets require local `docker` or `ssh` access to a remote Docker host
-- If those tools are missing, whatdoing degrades gracefully (e.g., `git not found` or `—`)
+If your system is not the default target:
 
-## Setup
+- if `pipx` is missing, install it first with `python3 -m pip install --user pipx`
+- if your projects are not under `~/projects`, set `base_path` to the correct directory
+- if `git` is missing, git widgets will simply show a fallback state
+- if Docker is not installed or reachable, Docker widgets will also fall back cleanly
 
-whatdoing needs a directory where each subdirectory is a project. The structure looks like:
+## Launch
+
+whatdoing expects one base directory where each subdirectory is a project. A simple layout looks like:
 
 ```
 ~/projects/
   my-app/
-    overview.md
   website/
-    overview.md
   side-project/
 ```
 
-### 1. Create the config
+You do not need to create `overview.md` files before launch. Project directories still appear in the dashboard without them, and you can create the overview from inside the app.
 
-```bash
-mkdir -p ~/.whatdoing
-```
+Legacy overview filenames `_OVERVIEW.md`, `PROJECT.md`, and `project.md` are still supported for reading.
 
-Create `~/.whatdoing/config.yaml`:
+The overview file is plain Markdown with YAML frontmatter. `whatdoing` reads it as the project record, and you can edit it in your normal editor.
+
+## Config
+
+Smallest config:
 
 ```yaml
-# Required: path to the directory containing your project folders
 base_path: ~/projects
+```
 
-# Optional: subdirectory within base_path where projects live
-# (leave blank if projects are directly inside base_path)
+Optional keys:
+
+```yaml
+# Subdirectory within base_path where projects live
 overview_dir:
 
-# Optional: preferred text editor (defaults to micro, then $EDITOR, then nano)
+# Preferred text editor (defaults to micro, then $EDITOR, then nano)
 editor: nano
 
-# Optional: SSH host for remote docker status checks
+# SSH host for remote docker status checks
 docker_host: myserver
 ```
 
-### 2. Add a project
+## Format
 
-Create a directory with an `overview.md` file:
+If you prefer to create an `overview.md` yourself instead of creating it from inside the app:
 
 ```bash
 mkdir -p ~/projects/my-app
@@ -91,17 +141,7 @@ None
 EOF
 ```
 
-### 3. Launch
-
-```bash
-whatdoing
-```
-
-Projects without an `overview.md` still appear in the dashboard (dimmed) and you can create one from inside the app.
-
-Compatibility: legacy overview filenames `_OVERVIEW.md`, `PROJECT.md`, and `project.md` are still supported for reading.
-
-## Usage
+## Commands
 
 ```
 whatdoing                 Dashboard - show all projects
@@ -112,7 +152,7 @@ whatdoing guide           User guide
 whatdoing --help          This message
 ```
 
-## Keyboard Shortcuts
+## Keys
 
 ### Dashboard
 
@@ -140,7 +180,7 @@ whatdoing --help          This message
 | `w` | Log work to journal |
 | `b` | Back to dashboard |
 
-## YAML Frontmatter
+## Fields
 
 Each `overview.md` supports these frontmatter fields:
 
@@ -160,7 +200,7 @@ Tags:
 ---
 ```
 
-## File Locations
+## Files
 
 | What | Where |
 |------|-------|
@@ -175,11 +215,9 @@ Override the config directory with `WHATDOING_HOME` env var.
 
 This project is open-source and free to use.
 
-Optional paid support and implementation services may be introduced in the future for teams that want faster setup, migration, and workflow customization.
+If support or implementation help would be useful, open an issue titled `commercial support interest`.
 
-If that would be useful, open an issue titled `commercial support interest`.
-
-## Public Safety Check
+## Audit
 
 Run the repo audit before publishing or opening a PR:
 

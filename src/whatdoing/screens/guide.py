@@ -16,50 +16,77 @@ GUIDE_TEXT = """\
 **whatdoing** is your project dashboard — a single place to see everything you're working on,
 log what you did, and find your way back when you get lost.
 
-## First-Time Setup
-
-### 1. Create the config directory
+### 1. Create the smallest working setup
 
 ```
-mkdir -p ~/.whatdoing
+mkdir -p ~/.whatdoing ~/projects
+printf '%s\n' 'base_path: ~/projects' > ~/.whatdoing/config.yaml
 ```
 
-### 2. Create `~/.whatdoing/config.yaml`
+### 2. Launch
 
-```yaml
-# Required: path to directory containing your project folders
-base_path: ~/projects
-
-# Optional: subdirectory within base_path where projects live
-# Leave blank if projects are directly inside base_path
-overview_dir:
-
-# Optional: preferred text editor (defaults to micro, then $EDITOR, then nano)
-editor: nano
-
-# Optional: SSH host for remote docker status checks
-docker_host:
+```bash
+whatdoing
 ```
 
-### 3. Set up your projects directory
+### 3. Success looks like this
+
+- The dashboard opens in your terminal
+- Each subdirectory in `~/projects` appears as a project row
+- Dimmed rows are still valid; they just do not have an `overview.md` yet
+- Press `e` inside a project to open or create its overview file
+
+## Will This Work On My System?
+
+- **Tested:** Linux terminals
+- **Likely works:** macOS and WSL
+- **Windows native:** use WSL for the best current experience
+
+No special shell is required (`bash`, `zsh`, etc.). `whatdoing` is a normal Python CLI app.
+
+If your system is not the default target:
+
+- If your projects are not under `~/projects`, change `base_path`
+- If `git` is missing, git widgets fall back cleanly
+- If Docker is not installed or reachable, Docker widgets also fall back cleanly
+
+## Project Layout
 
 Each subdirectory in your base path is a project:
 
 ```
 ~/projects/
   my-app/
-    overview.md
   website/
-    overview.md
   side-project/
 ```
 
-Projects without an `overview.md` still appear (dimmed) and you can
-create one from inside the app by pressing `e`.
+Projects without an `overview.md` still appear dimmed, and you can create one from inside the app by pressing `e`.
 
 Legacy names `_OVERVIEW.md`, `PROJECT.md`, and `project.md` are still read automatically.
 
 You can also override the config directory with the `WHATDOING_HOME` env var.
+
+## Config
+
+The smallest config is:
+
+```yaml
+base_path: ~/projects
+```
+
+Optional keys:
+
+```yaml
+# Subdirectory within base_path where projects live
+overview_dir:
+
+# Preferred text editor (defaults to micro, then $EDITOR, then nano)
+editor: nano
+
+# SSH host for remote docker status checks
+docker_host:
+```
 
 ## Keyboard Shortcuts
 
@@ -104,8 +131,13 @@ You can also override the config directory with the `WHATDOING_HOME` env var.
 
 ## Adding a Project
 
+The easiest path is:
+
 1. Create a directory in your projects folder
-2. Add an `overview.md` file with YAML frontmatter:
+2. Launch `whatdoing`
+3. Open the project row and press `e`
+
+If you prefer to create `overview.md` manually, use this format:
 
 ```yaml
 ---
